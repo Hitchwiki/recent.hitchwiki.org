@@ -575,6 +575,104 @@
             right: 30px;
         }
         
+        /* Relay status box */
+        .relay-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: white;
+            font-size: 0.85rem;
+            z-index: 1000;
+            min-width: 200px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .relay-status:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .relay-status h4 {
+            margin: 0 0 8px 0;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .relay-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 4px 0;
+            padding: 4px 0;
+        }
+        
+        .relay-status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        
+        .relay-connected {
+            background: #10B981;
+            box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+        }
+        
+        .relay-connecting {
+            background: #F59E0B;
+            animation: pulse 2s infinite;
+        }
+        
+        .relay-disconnected {
+            background: #EF4444;
+        }
+        
+        .relay-name {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+        
+        .relay-stats {
+            margin-left: auto;
+            font-size: 0.75rem;
+            opacity: 0.8;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .relay-status.collapsed {
+            min-width: auto;
+            padding: 8px 12px;
+        }
+        
+        .relay-status.collapsed .relay-item {
+            display: none;
+        }
+        
+        .relay-status.collapsed h4 {
+            margin: 0;
+        }
+        
+        .relay-toggle {
+            cursor: pointer;
+            user-select: none;
+        }
+        
         .note-hashtags {
             display: flex;
             flex-wrap: wrap;
@@ -908,6 +1006,14 @@
         <img id="lightbox-img" class="lightbox-content" src="" alt="">
     </div>
 
+    <!-- Relay status box -->
+    <div id="relayStatus" class="relay-status">
+        <h4 class="relay-toggle" onclick="toggleRelayStatus()">
+            🌐 Relays <span id="relayToggleIcon">▼</span>
+        </h4>
+        <div id="relayList"></div>
+    </div>
+
     <script type="module">
 
         class NostrNotesApp {
@@ -923,6 +1029,7 @@
                 this.isLoading = false;
                 this.showProfiles = false;
                 this.lastNoteTimestamp = null;
+                this.relayStatus = {};
                 this.init();
             }
 
@@ -930,6 +1037,7 @@
                 try {
                     this.initMap();
                     this.setupEventListeners();
+                    this.initializeRelayStatus();
                     await this.fetchNotes();
                 } catch (error) {
                     this.displayError('Failed to fetch notes: ' + error.message);
@@ -1004,6 +1112,11 @@
                 const notesContainer = document.getElementById('notesContainer');
                 notesContainer.innerHTML = '<div class="loading">Connecting to Nostr relays for HitchNotes...</div>';
 
+                // Update relay status to connecting
+                this.relays.forEach(relayUrl => {
+                    this.updateRelayStatus(relayUrl, 'connecting');
+                });
+
                 const promises = this.relays.map(relayUrl => this.fetchFromRelay(relayUrl));
                 
                 try {
@@ -1058,6 +1171,7 @@
                         
                         ws.onopen = () => {
                             console.log(`Connected to ${relayUrl}`);
+                            this.updateRelayStatus(relayUrl, 'connected');
                             
                             // Subscribe to all kinds of events using Nostr protocol (excluding kind 443)
                             const subscriptionId = "hitchnotes-" + Math.random().toString(36).substr(2, 9);
@@ -1103,9 +1217,11 @@
                                     }
                                     console.log(`Adding event kind ${eventData.kind} from ${relayUrl}:`, eventData);
                                     notes.push(eventData);
+                                    this.updateRelayStatus(relayUrl, 'connected', notes.length);
                                     } else if (messageType === 'EOSE') {
                                         // End of stored events
                                         console.log(`EOSE received from ${relayUrl}, found ${notes.length} events`);
+                                        this.updateRelayStatus(relayUrl, 'connected', notes.length);
                                         cleanup();
                                         resolve(notes);
                                     } else if (messageType === 'NOTICE') {
@@ -1133,11 +1249,13 @@
 
                         ws.onerror = (error) => {
                             console.error(`Error connecting to ${relayUrl}:`, error);
+                            this.updateRelayStatus(relayUrl, 'disconnected');
                             cleanup();
                             resolve(notes); // Return what we have so far
                         };
 
                         ws.onclose = () => {
+                            this.updateRelayStatus(relayUrl, 'disconnected');
                             cleanup();
                             resolve(notes);
                         };
@@ -1291,7 +1409,7 @@
                                     <span style="font-size: 0.85rem; opacity: 0.8;">${note.pubkey.substring(0, 16)}...</span>
                                     <div style="display: flex; gap: 8px; align-items: center;">
                                         <span style="font-size: 0.85rem; opacity: 0.8;" title="${timeString}">${relativeTime}</span>
-                                        <span class="note-kind">Profile</span>
+                                        <span class="note-kind">Profile (Kind ${note.kind})</span>
                                     </div>
                                 </div>
                             </div>
@@ -1377,7 +1495,7 @@
                                     <div>${note.pubkey.substring(0, 16)}...</div>
                                     <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
                                         <span title="${timeString}">${relativeTime}</span>
-                                        <span class="note-kind">Trip</span>
+                                        <span class="note-kind">Trip (Kind ${note.kind})</span>
                                     </div>
                                 </div>
                             </div>
@@ -1466,7 +1584,7 @@
                         <span class="note-author">${note.pubkey ? note.pubkey.substring(0, 16) + '...' : 'Unknown'}</span>
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <span class="note-time" title="${timeString}">${relativeTime}</span>
-                            <span class="note-kind">📝 Note</span>
+                            <span class="note-kind">📝 Note (Kind ${note.kind})</span>
                         </div>
                     </div>
                     <div class="note-content">${processedContent}</div>
@@ -1622,7 +1740,7 @@
                             
                             popupContent = `
                                 <div class="map-popup">
-                                    <div class="note-title">🚗 Hitchhiking Trip</div>
+                                    <div class="note-title">🚗 Hitchhiking Trip (Kind ${note.kind})</div>
                                     <div class="popup-rating">${stars} ${rating}/5</div>
                                     ${comment ? `<div class="popup-comment">"${this.escapeHtml(comment.substring(0, 100))}${comment.length > 100 ? '...' : ''}"</div>` : ''}
                                     <div class="popup-stops">📍 ${stops.length} stop${stops.length > 1 ? 's' : ''}</div>
@@ -1634,7 +1752,7 @@
                             // Fallback for trip data
                             popupContent = `
                                 <div class="map-popup">
-                                    <div class="note-title">🚗 Trip Data</div>
+                                    <div class="note-title">🚗 Trip Data (Kind ${note.kind})</div>
                                     <div class="note-preview">${this.escapeHtml(note.content?.substring(0, 100) || 'No content')}${note.content?.length > 100 ? '...' : ''}</div>
                                     <div class="note-time">${this.getRelativeTime(new Date(note.created_at * 1000))}</div>
                                     <div class="popup-location">📍 ${geo.location}</div>
@@ -1648,7 +1766,7 @@
                         
                         popupContent = `
                             <div class="map-popup">
-                                <div class="note-title">📝 HitchNote</div>
+                                <div class="note-title">📝 HitchNote (Kind ${note.kind})</div>
                                 <div class="note-preview">${this.escapeHtml(note.content?.substring(0, 100) || 'No content')}${note.content?.length > 100 ? '...' : ''}</div>
                                 ${hasImages ? '<div class="popup-meta">🖼️ Has images</div>' : ''}
                                 ${hashtags.length > 0 ? `<div class="popup-tags">${hashtags.slice(0, 3).map(tag => `#${tag}`).join(' ')}</div>` : ''}
@@ -1660,7 +1778,7 @@
                         // Default note
                         popupContent = `
                             <div class="map-popup">
-                                <div class="note-title">📍 HitchNote</div>
+                                <div class="note-title">📍 HitchNote (Kind ${note.kind})</div>
                                 <div class="note-preview">${this.escapeHtml(note.content?.substring(0, 100) || 'No content')}${note.content?.length > 100 ? '...' : ''}</div>
                                 <div class="note-time">${this.getRelativeTime(new Date(note.created_at * 1000))}</div>
                                 <div class="popup-location">📍 ${geo.location}</div>
@@ -1791,6 +1909,67 @@
                 div.textContent = text;
                 return div.innerHTML;
             }
+
+            initializeRelayStatus() {
+                // Initialize relay status for all relays
+                this.relays.forEach(relayUrl => {
+                    this.relayStatus[relayUrl] = {
+                        status: 'disconnected',
+                        notesCount: 0,
+                        lastSeen: null,
+                        connectionTime: null
+                    };
+                });
+                this.updateRelayStatusDisplay();
+            }
+
+            updateRelayStatus(relayUrl, status, notesCount = null) {
+                if (this.relayStatus[relayUrl]) {
+                    this.relayStatus[relayUrl].status = status;
+                    this.relayStatus[relayUrl].lastSeen = new Date();
+                    
+                    if (status === 'connected') {
+                        this.relayStatus[relayUrl].connectionTime = new Date();
+                    }
+                    
+                    if (notesCount !== null) {
+                        this.relayStatus[relayUrl].notesCount = notesCount;
+                    }
+                    
+                    this.updateRelayStatusDisplay();
+                }
+            }
+
+            updateRelayStatusDisplay() {
+                const relayList = document.getElementById('relayList');
+                if (!relayList) return;
+
+                relayList.innerHTML = this.relays.map(relayUrl => {
+                    const status = this.relayStatus[relayUrl];
+                    const relayName = relayUrl.replace('wss://', '').replace('wss://', '');
+                    const statusClass = `relay-${status.status}`;
+                    const statusText = status.status.charAt(0).toUpperCase() + status.status.slice(1);
+                    
+                    let statsText = '';
+                    if (status.notesCount > 0) {
+                        statsText = `${status.notesCount} notes`;
+                    }
+                    if (status.connectionTime) {
+                        const connectionAge = Math.floor((new Date() - status.connectionTime) / 1000);
+                        if (connectionAge < 60) {
+                            statsText += statsText ? ` • ${connectionAge}s` : `${connectionAge}s`;
+                        }
+                    }
+
+                    return `
+                        <div class="relay-item">
+                            <div class="relay-status-indicator ${statusClass}"></div>
+                            <div class="relay-name">${relayName}</div>
+                            <div class="relay-stats">${statsText}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
         }
 
         // Initialize the app when the page loads
@@ -1857,6 +2036,20 @@
                 }
             }
         });
+
+        // Relay status toggle functionality
+        function toggleRelayStatus() {
+            const relayStatus = document.getElementById('relayStatus');
+            const toggleIcon = document.getElementById('relayToggleIcon');
+            
+            if (relayStatus.classList.contains('collapsed')) {
+                relayStatus.classList.remove('collapsed');
+                toggleIcon.textContent = '▼';
+            } else {
+                relayStatus.classList.add('collapsed');
+                toggleIcon.textContent = '▶';
+            }
+        }
     </script>
 </body>
 </html>
