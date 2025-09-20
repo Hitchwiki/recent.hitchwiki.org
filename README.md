@@ -1,6 +1,9 @@
 # recent.hitchwiki.org
 
-A real-time web application that displays HitchNotes from Nostr relays on an interactive map and timeline.
+A vibe coded real-time web application that displays notes from Nostr relays on an interactive map and timeline:
+
+Relates to:
+- https://github.com/Hitchwiki/nostrhitch/
 
 ## Features
 
