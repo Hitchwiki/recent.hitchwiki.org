@@ -56,4 +56,4 @@ The application uses persistent WebSocket connections to maintain real-time upda
 
 ## License
 
-This project is part of the HitchWiki ecosystem for the hitchhiking community.
+MIT license
