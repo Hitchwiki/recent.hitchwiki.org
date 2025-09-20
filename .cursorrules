@@ -1,0 +1,111 @@
+# recent.hitchwiki.org - Cursor Rules
+
+## Project Overview
+This is a real-time web application that displays HitchNotes from Nostr relays on an interactive map and timeline. It's built for the hitchhiking community to share location-based notes and experiences.
+
+## Technology Stack
+- **Frontend**: Vanilla HTML5, CSS3, JavaScript (ES6+)
+- **Mapping**: Leaflet.js for interactive maps
+- **Protocol**: Nostr (decentralized social protocol)
+- **Styling**: Custom CSS with purple/yellow gradient theme
+- **Real-time**: WebSocket connections to Nostr relays
+
+## Key Files
+- `htdocs/index.html` - Main application file (single-page app)
+- `README.md` - Project documentation
+- `../nostrhitch/hwrecentchanges.py` - Python script that creates notes with geo data
+
+## Code Style Guidelines
+
+### JavaScript
+- Use ES6+ features (arrow functions, const/let, template literals)
+- Use meaningful variable names (e.g., `geoNotesCount` not `count`)
+- Add console.log statements for debugging real-time connections
+- Keep functions focused and single-purpose
+- Use async/await for asynchronous operations
+
+### CSS
+- Use CSS custom properties for consistent theming
+- Follow BEM-like naming for complex components
+- Use flexbox and grid for layouts
+- Implement smooth transitions and hover effects
+- Use backdrop-filter for modern glass effects
+
+### HTML
+- Use semantic HTML5 elements
+- Include proper accessibility attributes
+- Keep the single-page structure clean
+- Use data attributes for JavaScript targeting
+
+## Nostr Protocol Context
+
+### Note Types
+- **Kind 0**: User profiles (displayed as profile cards)
+- **Kind 1**: Text notes (most common, with images/hashtags)
+- **Kind 36820/443**: Hitchhiking trip data (special rendering with coordinates)
+- **Other kinds**: Fallback rendering
+
+### Geo Data Extraction
+The app extracts location data from:
+- `g` tags with geohash values
+- `l` tags with Open Location Codes
+- JSON trip data with latitude/longitude
+- Content parsing for coordinate patterns
+
+### Real-time Features
+- Persistent WebSocket connections to multiple relays
+- Automatic reconnection on connection drops
+- Live note updates with visual animations
+- Duplicate prevention based on note IDs
+
+## Development Patterns
+
+### Adding New Features
+1. Update the main `NostrNotesApp` class
+2. Add corresponding CSS styles
+3. Test with real Nostr data
+4. Ensure mobile responsiveness
+
+### Debugging
+- Check browser console for WebSocket connection status
+- Use `console.log` for note processing steps
+- Verify geo data extraction with different note types
+- Test with various relay responses
+
+### Performance
+- Limit notes to 1000 to prevent memory issues
+- Use efficient DOM updates for real-time changes
+- Implement proper cleanup for WebSocket connections
+- Optimize map marker rendering
+
+## Common Tasks
+
+### Adding New Note Types
+1. Add rendering logic in `displayNotes()` method
+2. Create specific renderer method (e.g., `renderNewNoteType()`)
+3. Update geo extraction if needed
+4. Add CSS styling for the new type
+
+### Modifying Geo Extraction
+1. Update `extractGeoLocation()` method
+2. Add new tag parsing logic
+3. Test with sample data from `hwrecentchanges.py`
+4. Update map plotting logic if needed
+
+### Styling Changes
+1. Modify CSS in the `<style>` section
+2. Maintain the purple/yellow gradient theme
+3. Ensure mobile responsiveness
+4. Test hover and animation effects
+
+## Testing Notes
+- Test with real Nostr relays for live data
+- Verify geo extraction with different coordinate formats
+- Check mobile responsiveness on various screen sizes
+- Test WebSocket reconnection scenarios
+
+## Dependencies
+- Leaflet.js (loaded from CDN)
+- No build process required (vanilla JavaScript)
+- WebSocket support in modern browsers
+- ES6+ support for JavaScript features
