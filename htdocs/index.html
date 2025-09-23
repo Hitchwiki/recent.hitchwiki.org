@@ -1107,7 +1107,7 @@
             }
 
             initMap() {
-                // Initialize Leaflet map
+                // Initialize Leaflet map with global view
                 this.map = L.map('map').setView([0, 0], 2);
                 
                 // Add custom styled map tiles with purple/yellow theme
@@ -1121,6 +1121,7 @@
                 
                 console.log('Map initialized');
             }
+
             
             styleMap() {
                 // Add custom CSS for map theming
@@ -2144,27 +2145,8 @@
                     this.mapMarkers.push(marker);
                 });
                 
-                // Fit map to show all markers, but maintain continent-level view
-                if (geoNotes.length > 0) {
-                    const group = new L.featureGroup(this.mapMarkers);
-                    const bounds = group.getBounds();
-                    
-                    // Calculate the center of all markers
-                    const center = bounds.getCenter();
-                    
-                    // Set a maximum zoom level to stay at continent level
-                    const maxZoom = 4;
-                    
-                    // If we have multiple markers, fit bounds but limit zoom
-                    if (geoNotes.length > 1) {
-                        this.map.fitBounds(bounds.pad(0.2), {
-                            maxZoom: maxZoom
-                        });
-                    } else {
-                        // For single marker, just center on it but don't zoom in too much
-                        this.map.setView(center, Math.min(maxZoom, 3));
-                    }
-                }
+                // Keep map at global view - no automatic zooming
+                console.log(`Plotted ${geoNotes.length} geo-located notes on map`);
             }
 
             async loadMoreNotes() {
