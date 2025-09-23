@@ -1850,7 +1850,16 @@
                     for (const tag of note.tags) {
                         // Check for geohash tags (from hwrecentchanges.py)
                         if (tag[0] === 'g' && tag[1]) {
-                            // First check if it's a geohash (from hwrecentchanges.py)
+                            // First check if it's direct lat,lng coordinates
+                            const coordMatch = tag[1].match(/^(-?\d+\.?\d*),(-?\d+\.?\d*)$/);
+                            if (coordMatch) {
+                                lat = parseFloat(coordMatch[1]);
+                                lng = parseFloat(coordMatch[2]);
+                                location = `Coordinates: ${tag[1]}`;
+                                break;
+                            }
+                            
+                            // Check if it's a geohash (from hwrecentchanges.py)
                             if (this.isGeohash(tag[1])) {
                                 const coords = this.geohashToLatLng(tag[1]);
                                 if (coords) {
