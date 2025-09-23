@@ -172,7 +172,7 @@
         .stats {
             position: fixed;
             bottom: 20px;
-            right: 20px;
+            left: 20px;
             background: rgba(255,255,255,0.1);
             border-radius: 12px;
             padding: 15px;
@@ -181,7 +181,7 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.2);
             z-index: 1000;
-            min-width: 200px;
+            min-width: 250px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
         }
@@ -201,6 +201,60 @@
         .stats p {
             margin: 5px 0;
             opacity: 0.9;
+        }
+
+        .stats-section {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .stats-section:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .relay-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 4px 0;
+            padding: 4px 0;
+            font-size: 0.85rem;
+        }
+
+        .relay-status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .relay-connected {
+            background: #10B981;
+            box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+        }
+
+        .relay-connecting {
+            background: #F59E0B;
+            animation: pulse 2s infinite;
+        }
+
+        .relay-disconnected {
+            background: #EF4444;
+        }
+
+        .relay-name {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+
+        .relay-stats {
+            margin-left: auto;
+            font-size: 0.75rem;
+            opacity: 0.8;
         }
         
         .profile-card {
@@ -587,103 +641,6 @@
             right: 30px;
         }
         
-        /* Relay status box */
-        .relay-status {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 12px 16px;
-            color: white;
-            font-size: 0.85rem;
-            z-index: 1000;
-            min-width: 200px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-        }
-        
-        .relay-status:hover {
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-        }
-        
-        .relay-status h4 {
-            margin: 0 0 8px 0;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        .relay-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin: 4px 0;
-            padding: 4px 0;
-        }
-        
-        .relay-status-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-        
-        .relay-connected {
-            background: #10B981;
-            box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
-        }
-        
-        .relay-connecting {
-            background: #F59E0B;
-            animation: pulse 2s infinite;
-        }
-        
-        .relay-disconnected {
-            background: #EF4444;
-        }
-        
-        .relay-name {
-            font-family: 'Courier New', monospace;
-            font-size: 0.8rem;
-            opacity: 0.9;
-        }
-        
-        .relay-stats {
-            margin-left: auto;
-            font-size: 0.75rem;
-            opacity: 0.8;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .relay-status.collapsed {
-            min-width: auto;
-            padding: 8px 12px;
-        }
-        
-        .relay-status.collapsed .relay-item {
-            display: none;
-        }
-        
-        .relay-status.collapsed h4 {
-            margin: 0;
-        }
-        
-        .relay-toggle {
-            cursor: pointer;
-            user-select: none;
-        }
         
         .note-hashtags {
             display: flex;
@@ -1012,34 +969,21 @@
             box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
         }
 
-        .footer {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            z-index: 1000;
-        }
-
         .github-link {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: rgba(255, 255, 255, 0.1);
             color: white;
             text-decoration: none;
-            padding: 8px 16px;
-            border-radius: 20px;
             font-size: 0.9rem;
             font-weight: 500;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
             transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 4px 8px;
+            border-radius: 8px;
         }
 
         .github-link:hover {
-            background: rgba(255, 255, 255, 0.15);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 0.1);
             color: white;
             text-decoration: none;
         }
@@ -1106,28 +1050,12 @@
         <img id="lightbox-img" class="lightbox-content" src="" alt="">
     </div>
 
-    <!-- Relay status box -->
-    <div id="relayStatus" class="relay-status">
-        <h4 class="relay-toggle" onclick="toggleRelayStatus()">
-            🌐 Relays <span id="relayToggleIcon">▼</span>
-        </h4>
-        <div id="relayList"></div>
-    </div>
 
     <!-- Live indicator -->
     <div id="liveIndicator" class="live-indicator" style="display: none;">
         🔴 LIVE
     </div>
 
-    <!-- Footer with GitHub link -->
-    <div class="footer">
-        <a href="https://github.com/Hitchwiki/recent.hitchwiki.org" target="_blank" rel="noopener noreferrer" class="github-link">
-            <svg class="github-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.548-1.304.997-1.304-3.58-.407-7.34-1.789-7.34-7.969 0-1.76.627-3.197 1.655-4.325-.165-.407-.715-2.04.157-4.251 0 0 1.35-.432 4.425 1.653 1.283-.356 2.659-.535 4.025-.541 1.366.006 2.742.185 4.025.541 3.075-2.085 4.425-1.653 4.425-1.653.872 2.211.322 3.844.157 4.251 1.028 1.128 1.655 2.565 1.655 4.325 0 6.19-3.76 7.562-7.34 7.969.576.498 1.089 1.475 1.089 2.975v4.425c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-            </svg>
-            GitHub
-        </a>
-    </div>
 
     <!-- Raw data modal -->
     <div id="rawDataModal" class="raw-data-modal">
@@ -1608,11 +1536,52 @@
                         geoNotesCount++;
                     }
                 });
+
+                // Generate relay status HTML
+                const relayStatusHtml = this.relays.map(relayUrl => {
+                    const status = this.relayStatus[relayUrl];
+                    const relayName = relayUrl.replace('wss://', '').replace('wss://', '');
+                    const statusClass = `relay-${status.status}`;
+                    const statusText = status.status.charAt(0).toUpperCase() + status.status.slice(1);
+                    
+                    let statsText = '';
+                    if (status.notesCount > 0) {
+                        statsText = `${status.notesCount} notes`;
+                    }
+                    if (status.connectionTime) {
+                        const connectionAge = Math.floor((new Date() - status.connectionTime) / 1000);
+                        if (connectionAge < 60) {
+                            statsText += statsText ? ` • ${connectionAge}s` : `${connectionAge}s`;
+                        }
+                    }
+
+                    return `
+                        <div class="relay-item">
+                            <div class="relay-status-indicator ${statusClass}"></div>
+                            <div class="relay-name">${relayName}</div>
+                            <div class="relay-stats">${statsText}</div>
+                        </div>
+                    `;
+                }).join('');
                 
                 statsDiv.innerHTML = `
-                    <h3>📊 Statistics</h3>
-                    <p><strong>${notes.length}</strong> total notes loaded</p>
-                    <p><strong>${geoNotesCount}</strong> notes with geo info</p>
+                    <div class="stats-section">
+                        <h3>📊 Statistics</h3>
+                        <p><strong>${notes.length}</strong> total notes loaded</p>
+                        <p><strong>${geoNotesCount}</strong> notes with geo info</p>
+                    </div>
+                    <div class="stats-section">
+                        <h3>🌐 Relays</h3>
+                        ${relayStatusHtml}
+                    </div>
+                    <div class="stats-section">
+                        <a href="https://github.com/Hitchwiki/recent.hitchwiki.org" target="_blank" rel="noopener noreferrer" class="github-link">
+                            <svg class="github-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.548-1.304.997-1.304-3.58-.407-7.34-1.789-7.34-7.969 0-1.76.627-3.197 1.655-4.325-.165-.407-.715-2.04.157-4.251 0 0 1.35-.432 4.425 1.653 1.283-.356 2.659-.535 4.025-.541 1.366.006 2.742.185 4.025.541 3.075-2.085 4.425-1.653 4.425-1.653.872 2.211.322 3.844.157 4.251 1.028 1.128 1.655 2.565 1.655 4.325 0 6.19-3.76 7.562-7.34 7.969.576.498 1.089 1.475 1.089 2.975v4.425c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                            </svg>
+                            GitHub
+                        </a>
+                    </div>
                 `;
             }
 
@@ -2415,19 +2384,6 @@
             }
         });
 
-        // Relay status toggle functionality
-        function toggleRelayStatus() {
-            const relayStatus = document.getElementById('relayStatus');
-            const toggleIcon = document.getElementById('relayToggleIcon');
-            
-            if (relayStatus.classList.contains('collapsed')) {
-                relayStatus.classList.remove('collapsed');
-                toggleIcon.textContent = '▼';
-            } else {
-                relayStatus.classList.add('collapsed');
-                toggleIcon.textContent = '▶';
-            }
-        }
 
     </script>
 
