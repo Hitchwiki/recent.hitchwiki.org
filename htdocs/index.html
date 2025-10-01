@@ -7,7 +7,10 @@
     <title>recent.hitchwiki.org</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -832,7 +835,40 @@
             transform: scale(1.1);
             box-shadow: 0 8px 25px rgba(139, 92, 246, 0.6);
         }
-        
+
+        .marker-cluster div {
+            background: linear-gradient(135deg, #8B5CF6, #F59E0B);
+            border: 2px solid #fff;
+            border-radius: 50%;
+            color: white;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+        }
+
+        .marker-cluster span {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.9rem;
+            letter-spacing: -0.01em;
+        }
+
+        .marker-cluster-small div {
+            width: 36px;
+            height: 36px;
+        }
+
+        .marker-cluster-medium div {
+            width: 44px;
+            height: 44px;
+        }
+
+        .marker-cluster-large div {
+            width: 52px;
+            height: 52px;
+        }
+
         .map-popup {
             max-width: 250px;
             font-family: 'Inter', sans-serif;
@@ -1267,7 +1303,7 @@
                 ];
                 this.notes = [];
                 this.map = null;
-                this.mapMarkers = [];
+                this.clusterGroup = null;
                 this.currentLimit = 1000; // Increased limit to fetch more notes
                 this.isLoading = false;
                 this.lastNoteTimestamp = null;
@@ -1307,6 +1343,27 @@
                     attribution: '© OpenStreetMap contributors',
                     className: 'custom-map-tiles'
                 }).addTo(this.map);
+
+                this.clusterGroup = L.markerClusterGroup({
+                    showCoverageOnHover: false,
+                    spiderfyOnMaxZoom: true,
+                    maxClusterRadius: 50,
+                    iconCreateFunction: (cluster) => {
+                        const count = cluster.getChildCount();
+                        let sizeClass = 'small';
+                        if (count >= 100) {
+                            sizeClass = 'large';
+                        } else if (count >= 25) {
+                            sizeClass = 'medium';
+                        }
+                        return L.divIcon({
+                            html: `<div><span>${count}</span></div>`,
+                            className: `marker-cluster marker-cluster-${sizeClass}`,
+                            iconSize: L.point(sizeClass === 'large' ? 52 : sizeClass === 'medium' ? 44 : 36, sizeClass === 'large' ? 52 : sizeClass === 'medium' ? 44 : 36)
+                        });
+                    }
+                });
+                this.map.addLayer(this.clusterGroup);
                 
                 // Add custom CSS for map styling
                 this.styleMap();
@@ -2280,9 +2337,11 @@
             }
 
             plotNotesOnMap(notes) {
-                // Clear existing markers
-                this.mapMarkers.forEach(marker => this.map.removeLayer(marker));
-                this.mapMarkers = [];
+                if (!this.clusterGroup) {
+                    return;
+                }
+
+                this.clusterGroup.clearLayers();
                 
                 const geoNotes = [];
                 
@@ -2373,8 +2432,7 @@
                     }
                     
                     marker.bindPopup(popupContent);
-                    marker.addTo(this.map);
-                    this.mapMarkers.push(marker);
+                    this.clusterGroup.addLayer(marker);
                 });
                 
                 // Keep map at global view - no automatic zooming
