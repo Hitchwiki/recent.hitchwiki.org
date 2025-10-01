@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self' wss: https:;">
     <title>recent.hitchwiki.org</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -1161,6 +1162,103 @@
 
     <script type="module">
 
+        // Minimal bech32 encoder to turn hex pubkeys into npub identifiers.
+        const BECH32_CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+
+        function bech32Polymod(values) {
+            let chk = 1;
+            for (const value of values) {
+                const top = chk >>> 25;
+                chk = ((chk & 0x1ffffff) << 5) ^ value;
+                if (top & 0x01) chk ^= 0x3b6a57b2;
+                if (top & 0x02) chk ^= 0x26508e6d;
+                if (top & 0x04) chk ^= 0x1ea119fa;
+                if (top & 0x08) chk ^= 0x3d4233dd;
+                if (top & 0x10) chk ^= 0x2a1462b3;
+            }
+            return chk;
+        }
+
+        function bech32HrpExpand(hrp) {
+            const ret = [];
+            for (let i = 0; i < hrp.length; i++) {
+                ret.push(hrp.charCodeAt(i) >>> 5);
+            }
+            ret.push(0);
+            for (let i = 0; i < hrp.length; i++) {
+                ret.push(hrp.charCodeAt(i) & 31);
+            }
+            return ret;
+        }
+
+        function bech32CreateChecksum(hrp, data) {
+            const values = bech32HrpExpand(hrp).concat(data, [0, 0, 0, 0, 0, 0]);
+            const polymod = bech32Polymod(values) ^ 1;
+            const result = [];
+            for (let i = 0; i < 6; i++) {
+                result.push((polymod >>> (5 * (5 - i))) & 31);
+            }
+            return result;
+        }
+
+        function bech32Encode(hrp, data) {
+            const combined = data.concat(bech32CreateChecksum(hrp, data));
+            let ret = hrp + '1';
+            for (const value of combined) {
+                ret += BECH32_CHARSET[value];
+            }
+            return ret;
+        }
+
+        function convertBits(data, fromBits, toBits, pad = true) {
+            let acc = 0;
+            let bits = 0;
+            const ret = [];
+            const maxv = (1 << toBits) - 1;
+            for (const value of data) {
+                if (value < 0 || value >>> fromBits !== 0) {
+                    return null;
+                }
+                acc = (acc << fromBits) | value;
+                bits += fromBits;
+                while (bits >= toBits) {
+                    bits -= toBits;
+                    ret.push((acc >>> bits) & maxv);
+                }
+            }
+            if (pad) {
+                if (bits > 0) {
+                    ret.push((acc << (toBits - bits)) & maxv);
+                }
+            } else if (bits >= fromBits || ((acc << (toBits - bits)) & maxv)) {
+                return null;
+            }
+            return ret;
+        }
+
+        function hexToBytes(hex) {
+            if (!hex || typeof hex !== 'string') return null;
+            const normalized = hex.trim().toLowerCase();
+            if (normalized.length % 2 !== 0) return null;
+            const bytes = [];
+            for (let i = 0; i < normalized.length; i += 2) {
+                const byte = parseInt(normalized.slice(i, i + 2), 16);
+                if (Number.isNaN(byte)) {
+                    return null;
+                }
+                bytes.push(byte);
+            }
+            return bytes;
+        }
+
+        function hexToNpub(hex) {
+            const bytes = hexToBytes(hex);
+            if (!bytes) return null;
+            const words = convertBits(bytes, 8, 5);
+            if (!words) return null;
+            return bech32Encode('npub', words);
+        }
+
         class NostrNotesApp {
             constructor() {
                 this.relays = [
@@ -1178,6 +1276,7 @@
                 this.relayStatus = {};
                 this.websockets = {}; // Store WebSocket connections
                 this.subscriptionIds = {}; // Store subscription IDs for each relay
+                this.npubCache = new Map(); // Cache hex -> npub conversions
                 this.init();
             }
 
@@ -1702,11 +1801,44 @@
                 return date.toLocaleDateString();
             }
 
+            getFullNpub(pubkey) {
+                if (!pubkey) return null;
+                if (this.npubCache.has(pubkey)) {
+                    return this.npubCache.get(pubkey);
+                }
+                const npub = hexToNpub(pubkey);
+                if (npub) {
+                    this.npubCache.set(pubkey, npub);
+                }
+                return npub;
+            }
+
+            getPubkeyDisplay(pubkey) {
+                const fullNpub = this.getFullNpub(pubkey);
+                if (fullNpub) {
+                    return {
+                        short: `${fullNpub.substring(0, 16)}...`,
+                        full: fullNpub
+                    };
+                }
+                if (!pubkey) {
+                    return {
+                        short: 'Unknown',
+                        full: 'Unknown'
+                    };
+                }
+                return {
+                    short: `${pubkey.substring(0, 16)}...`,
+                    full: pubkey
+                };
+            }
+
             renderProfileNote(note, timeString, relativeTime) {
                 try {
                     const profile = JSON.parse(note.content);
                     const displayName = profile.display_name || profile.name || 'Anonymous';
-                    const username = profile.name || note.pubkey.substring(0, 16) + '...';
+                    const pubkeyDisplay = this.getPubkeyDisplay(note.pubkey);
+                    const username = profile.name || pubkeyDisplay.short;
                     const about = profile.about || '';
                     const website = profile.website || '';
                     const lud16 = profile.lud16 || '';
@@ -1727,7 +1859,7 @@
                                 ${about ? `<div class="profile-about">${this.escapeHtml(about)}</div>` : ''}
                                 ${links.length > 0 ? `<div class="profile-links">${links.join('')}</div>` : ''}
                                 <div class="profile-meta">
-                                    <span style="font-size: 0.85rem; opacity: 0.8;">${note.pubkey.substring(0, 16)}...</span>
+                                    <span style="font-size: 0.85rem; opacity: 0.8;" title="${pubkeyDisplay.full}">${pubkeyDisplay.short}</span>
                                     <div style="display: flex; gap: 8px; align-items: center;">
                                         <span style="font-size: 0.85rem; opacity: 0.8;" title="${timeString}">${relativeTime}</span>
                                         <span class="note-kind note-kind-clickable" onclick="showRawData('${note.id}')">Profile (Kind ${note.kind})</span>
@@ -1738,9 +1870,10 @@
                     `;
                 } catch (e) {
                     // Fallback to regular note display if JSON parsing fails
+                    const pubkeyDisplay = this.getPubkeyDisplay(note.pubkey);
                     return `
                         <div class="note-header">
-                            <span class="note-author">${note.pubkey.substring(0, 16)}...</span>
+                            <span class="note-author" title="${pubkeyDisplay.full}">${pubkeyDisplay.short}</span>
                             <div style="display: flex; gap: 8px; align-items: center;">
                                 <span class="note-time" title="${timeString}">${relativeTime}</span>
                                 <span class="note-kind">Kind ${note.kind}</span>
@@ -1784,6 +1917,8 @@
                         `<span class="hitchhiker-tag">${this.escapeHtml(h.nickname || 'Anonymous')}</span>`
                     ).join('');
                     
+                    const pubkeyDisplay = this.getPubkeyDisplay(note.pubkey);
+
                     return `
                         <div class="trip-card">
                             <div class="trip-header">
@@ -1813,7 +1948,7 @@
                                     ${source ? `<div>Source: ${this.escapeHtml(source)}</div>` : ''}
                                 </div>
                                 <div style="text-align: right;">
-                                    <div>${note.pubkey.substring(0, 16)}...</div>
+                                    <div title="${pubkeyDisplay.full}">${pubkeyDisplay.short}</div>
                                     <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
                                         <span title="${timeString}">${relativeTime}</span>
                                         <span class="note-kind note-kind-clickable" onclick="showRawData('${note.id}')">Trip (Kind ${note.kind})</span>
@@ -1824,9 +1959,10 @@
                     `;
                 } catch (e) {
                     // Fallback to regular note display if JSON parsing fails
+                    const pubkeyDisplay = this.getPubkeyDisplay(note.pubkey);
                     return `
                         <div class="note-header">
-                            <span class="note-author">${note.pubkey.substring(0, 16)}...</span>
+                            <span class="note-author" title="${pubkeyDisplay.full}">${pubkeyDisplay.short}</span>
                             <div style="display: flex; gap: 8px; align-items: center;">
                                 <span class="note-time" title="${timeString}">${relativeTime}</span>
                                 <span class="note-kind">Kind ${note.kind}</span>
@@ -1900,9 +2036,11 @@
                     </div>
                 ` : '';
                 
+                const pubkeyDisplay = this.getPubkeyDisplay(note.pubkey);
+
                 return `
                     <div class="note-header">
-                        <span class="note-author">${note.pubkey ? note.pubkey.substring(0, 16) + '...' : 'Unknown'}</span>
+                        <span class="note-author" title="${pubkeyDisplay.full}">${pubkeyDisplay.short}</span>
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <span class="note-time" title="${timeString}">${relativeTime}</span>
                             <span class="note-kind note-kind-clickable" onclick="showRawData('${note.id}')">📝 Note (Kind ${note.kind})</span>
@@ -1916,9 +2054,10 @@
 
             renderFallbackNote(note, timeString, relativeTime) {
                 // Safe fallback rendering for any note type
+                const pubkeyDisplay = this.getPubkeyDisplay(note.pubkey);
                 return `
                     <div class="note-header">
-                        <span class="note-author">${note.pubkey ? note.pubkey.substring(0, 16) + '...' : 'Unknown'}</span>
+                        <span class="note-author" title="${pubkeyDisplay.full}">${pubkeyDisplay.short}</span>
                         <div style="display: flex; gap: 8px; align-items: center;">
                             <span class="note-time" title="${timeString}">${relativeTime}</span>
                             <span class="note-kind">Kind ${note.kind || 'Unknown'}</span>
