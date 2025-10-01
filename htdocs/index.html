@@ -67,6 +67,86 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+
+        .npub-display {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .npub-label {
+            display: block;
+            font-size: 0.85rem;
+            color: #fff;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .npub-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .npub-value {
+            flex: 1;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.75rem;
+            color: #8B5CF6;
+            background: rgba(139, 92, 246, 0.15);
+            padding: 6px 10px;
+            border-radius: 4px;
+            word-break: break-all;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            margin: 0;
+            cursor: text;
+            user-select: all;
+            transition: all 0.2s ease;
+        }
+
+        .npub-value:hover {
+            background: rgba(139, 92, 246, 0.25);
+            border-color: rgba(139, 92, 246, 0.5);
+        }
+
+        .copy-btn {
+            background: linear-gradient(135deg, #8B5CF6, #F59E0B);
+            border: none;
+            border-radius: 4px;
+            padding: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            height: 28px;
+        }
+
+        .copy-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        .copy-btn:active {
+            transform: translateY(0);
+        }
+
+        .copy-icon {
+            width: 12px;
+            height: 12px;
+            color: white;
+        }
         
         .note {
             background: white;
@@ -1032,6 +1112,17 @@
         <div class="notes-container">
             <div class="container">
                 <h1>recent.hitchwiki.org</h1>
+                <div class="npub-display">
+                    <span class="npub-label">Nostr Pubkey:</span>
+                    <div class="npub-container">
+                        <code class="npub-value" id="npubValue">npub12vz4acq3a94qpfc9kwp98wwtces5ej7n0h6d44pwc6dmucyvggyses5uyk</code>
+                        <button class="copy-btn" onclick="copyNpub()" title="Copy to clipboard">
+                            <svg class="copy-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
                 <div id="notesContainer">
                     <div class="loading">Loading HitchNotes from Nostr relays...</div>
                 </div>
@@ -1082,6 +1173,8 @@
                 this.currentLimit = 1000; // Increased limit to fetch more notes
                 this.isLoading = false;
                 this.lastNoteTimestamp = null;
+                this.cacheKey = 'hitchwiki_notes_cache';
+                this.cacheExpiry = 5 * 60 * 1000; // 5 minutes in milliseconds
                 this.relayStatus = {};
                 this.websockets = {}; // Store WebSocket connections
                 this.subscriptionIds = {}; // Store subscription IDs for each relay
@@ -2380,6 +2473,35 @@
 
     <!-- Global functions for onclick handlers -->
     <script>
+        // Copy npub to clipboard
+        function copyNpub() {
+            const npubValue = document.getElementById('npubValue');
+            const text = npubValue.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // Show success feedback
+                const copyBtn = document.querySelector('.copy-btn');
+                const originalContent = copyBtn.innerHTML;
+                
+                copyBtn.innerHTML = `
+                    <svg class="copy-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 16.17L4.83 12L3.41 13.41L9 19L21 7L19.59 5.59L9 16.17Z" fill="currentColor"/>
+                    </svg>
+                `;
+                copyBtn.style.background = 'linear-gradient(135deg, #10B981, #059669)';
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalContent;
+                    copyBtn.style.background = 'linear-gradient(135deg, #8B5CF6, #F59E0B)';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                // Fallback for older browsers
+                npubValue.select();
+                document.execCommand('copy');
+            });
+        }
+
         // Raw data modal functionality
         function showRawData(noteId) {
             const modal = document.getElementById('rawDataModal');

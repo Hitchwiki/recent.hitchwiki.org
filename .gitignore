@@ -98,3 +98,5 @@ local/
 dev/
 
 deploy.sh
+
+settings.json
