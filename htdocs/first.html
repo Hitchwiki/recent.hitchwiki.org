@@ -1,0 +1,2742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' https://unpkg.com; connect-src 'self' wss: https:;">
+    <title>recent.hitchwiki.org</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #8B5CF6 0%, #F59E0B 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+        }
+        
+        .main-container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .map-container {
+            flex: 1;
+            background: #f0f0f0;
+            position: relative;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .notes-container {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+        
+        .container {
+            max-width: none;
+            margin: 0;
+        }
+        
+        h1 {
+            text-align: center;
+            color: white;
+            font-size: 2.2rem;
+            font-weight: 700;
+            font-family: 'Space Grotesk', sans-serif;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #ffffff, #f8fafc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .npub-display {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .npub-label {
+            display: block;
+            font-size: 0.85rem;
+            color: #fff;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .npub-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .npub-value {
+            flex: 1;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.75rem;
+            color: #8B5CF6;
+            background: rgba(139, 92, 246, 0.15);
+            padding: 6px 10px;
+            border-radius: 4px;
+            word-break: break-all;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            margin: 0;
+            cursor: text;
+            user-select: all;
+            transition: all 0.2s ease;
+        }
+
+        .npub-value:hover {
+            background: rgba(139, 92, 246, 0.25);
+            border-color: rgba(139, 92, 246, 0.5);
+        }
+
+        .copy-btn {
+            background: linear-gradient(135deg, #8B5CF6, #F59E0B);
+            border: none;
+            border-radius: 4px;
+            padding: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+            height: 28px;
+        }
+
+        .copy-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        .copy-btn:active {
+            transform: translateY(0);
+        }
+
+        .copy-icon {
+            width: 12px;
+            height: 12px;
+            color: white;
+        }
+        
+        .note {
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .note:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+        
+        .note::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #8B5CF6, #F59E0B);
+        }
+        
+        .note-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .note-author {
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+            color: #2c3e50;
+            font-size: 0.95rem;
+            background: #f8f9fa;
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid #e9ecef;
+            letter-spacing: -0.01em;
+        }
+        
+        .note-time {
+            color: #6c757d;
+            font-size: 0.85rem;
+            background: #f8f9fa;
+            padding: 4px 10px;
+            border-radius: 12px;
+        }
+        
+        .note-kind {
+            background: linear-gradient(135deg, #8B5CF6, #F59E0B);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .note-content {
+            line-height: 1.6;
+            color: #2c3e50;
+            font-size: 0.95rem;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            font-weight: 400;
+            letter-spacing: -0.005em;
+            margin: 8px 0;
+        }
+        
+        .loading {
+            text-align: center;
+            color: white;
+            font-style: italic;
+            font-size: 1.1rem;
+            padding: 40px 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .error {
+            color: #DC2626;
+            background: rgba(220, 38, 38, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border: 1px solid rgba(220, 38, 38, 0.2);
+            text-align: center;
+        }
+        
+        .stats {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 15px;
+            color: black;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            z-index: 1000;
+            min-width: 250px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .stats:hover {
+            background: rgba(255,255,255,0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .stats h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        
+        .stats p {
+            margin: 5px 0;
+            opacity: 0.9;
+        }
+
+        .stats-section {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .stats-section:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .relay-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 4px 0;
+            padding: 4px 0;
+            font-size: 0.85rem;
+        }
+
+        .relay-status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .relay-connected {
+            background: #10B981;
+            box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+        }
+
+        .relay-connecting {
+            background: #F59E0B;
+            animation: pulse 2s infinite;
+        }
+
+        .relay-disconnected {
+            background: #EF4444;
+        }
+
+        .relay-name {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+
+        .relay-stats {
+            margin-left: auto;
+            font-size: 0.75rem;
+            opacity: 0.8;
+        }
+        
+        .profile-card {
+            background: linear-gradient(135deg, #8B5CF6 0%, #F59E0B 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 0;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .profile-banner {
+            width: 100%;
+            height: 120px;
+            background: linear-gradient(135deg, #8B5CF6 0%, #F59E0B 100%);
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+        
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 4px solid white;
+            position: absolute;
+            bottom: -40px;
+            left: 20px;
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .profile-content {
+            padding: 50px 20px 20px 20px;
+        }
+        
+        .profile-name {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            color: white;
+        }
+        
+        .profile-username {
+            font-size: 1rem;
+            opacity: 0.8;
+            margin: 0 0 12px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .profile-about {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin: 0 0 16px 0;
+            opacity: 0.9;
+        }
+        
+        .profile-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .profile-link {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .profile-link:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+        
+        .profile-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .trip-card {
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 12px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        }
+        
+        .trip-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .trip-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .trip-rating {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+        }
+        
+        .trip-stops {
+            margin: 16px 0;
+        }
+        
+        .trip-stop {
+            background: rgba(255,255,255,0.15);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .trip-stop:last-child {
+            margin-bottom: 0;
+        }
+        
+        .stop-location {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .stop-coords {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .stop-time {
+            font-size: 0.9rem;
+            margin-top: 4px;
+            opacity: 0.9;
+        }
+        
+        .trip-comment {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 12px 0;
+            font-style: italic;
+            border-left: 4px solid rgba(255,255,255,0.3);
+        }
+        
+        .trip-stops {
+            margin: 8px 0;
+        }
+        
+        .trip-stop {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px;
+            margin: 4px 0;
+            font-size: 0.9rem;
+        }
+        
+        .stop-location {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .stop-coords {
+            font-family: 'Space Grotesk', monospace;
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+        
+        .stop-time {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+        
+        .trip-comment {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px;
+            margin: 8px 0;
+            font-style: italic;
+        }
+        
+        .hitchhiker-tag {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin: 2px;
+            display: inline-block;
+        }
+        
+        .trip-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+        
+        .trip-hitchhikers {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        
+        .hitchhiker-tag {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+        }
+        
+        .note-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin: 16px 0;
+        }
+        
+        .note-image {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            background: #f8f9fa;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .note-image:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .note-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: opacity 0.3s ease;
+        }
+        
+        .note-image.loading img {
+            opacity: 0;
+        }
+        
+        .note-image.loaded img {
+            opacity: 1;
+        }
+        
+        .blurhash-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #8B5CF6, #F59E0B);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 500;
+            opacity: 0.8;
+        }
+        
+        .image-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #8B5CF6;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .image-error {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #dc2626;
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        /* Lightbox styles */
+        .lightbox {
+            display: none;
+            position: fixed;
+            z-index: 9999;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            backdrop-filter: blur(10px);
+        }
+        
+        .lightbox-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10000;
+            transition: all 0.3s ease;
+        }
+        
+        .lightbox-close:hover {
+            color: #F59E0B;
+            transform: scale(1.1);
+        }
+        
+        .lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            color: white;
+            font-size: 30px;
+            cursor: pointer;
+            padding: 20px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        
+        .lightbox-nav:hover {
+            background: rgba(139, 92, 246, 0.8);
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .lightbox-prev {
+            left: 30px;
+        }
+        
+        .lightbox-next {
+            right: 30px;
+        }
+        
+        
+        .note-hashtags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 12px 0;
+            padding: 12px 0;
+            border-top: 1px solid rgba(0,0,0,0.08);
+        }
+        
+        .hashtag {
+            background: linear-gradient(135deg, #8B5CF6, #F59E0B);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-family: 'Space Grotesk', sans-serif;
+            letter-spacing: -0.01em;
+            box-shadow: 0 2px 4px rgba(139, 92, 246, 0.2);
+        }
+        
+        .hashtag:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(139, 92, 246, 0.4);
+        }
+        
+        .hashtag:active {
+            transform: translateY(0);
+        }
+        
+        .note-content {
+            line-height: 1.6;
+            color: #2c3e50;
+            font-size: 0.95rem;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            font-weight: 400;
+            letter-spacing: -0.005em;
+            margin: 8px 0;
+        }
+        
+        .note-content a {
+            color: #8B5CF6;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .note-content a:hover {
+            text-decoration: underline;
+        }
+        
+        .content-link {
+            color: #8B5CF6;
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .content-link:hover {
+            color: #F59E0B;
+            border-bottom-color: #F59E0B;
+            text-decoration: none;
+        }
+        
+        .hashtag-inline {
+            background: linear-gradient(135deg, #8B5CF6, #F59E0B);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.9em;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+            margin: 0 3px;
+            letter-spacing: -0.01em;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(139, 92, 246, 0.3);
+            display: inline-block;
+        }
+        
+        .hashtag-inline:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(139, 92, 246, 0.4);
+        }
+        
+        .map-marker {
+            background: linear-gradient(135deg, #8B5CF6, #F59E0B);
+            color: white;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            border: 3px solid white;
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .map-marker:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.6);
+        }
+
+        .marker-cluster div {
+            background: linear-gradient(135deg, #8B5CF6, #F59E0B);
+            border: 2px solid #fff;
+            border-radius: 50%;
+            color: white;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+        }
+
+        .marker-cluster span {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.9rem;
+            letter-spacing: -0.01em;
+        }
+
+        .marker-cluster-small div {
+            width: 36px;
+            height: 36px;
+        }
+
+        .marker-cluster-medium div {
+            width: 44px;
+            height: 44px;
+        }
+
+        .marker-cluster-large div {
+            width: 52px;
+            height: 52px;
+        }
+
+        .map-popup {
+            max-width: 250px;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .map-popup .note-title {
+            font-weight: 600;
+            color: #8B5CF6;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .popup-rating {
+            color: #F59E0B;
+            font-weight: 600;
+            margin: 4px 0;
+            font-size: 0.85rem;
+        }
+        
+        .popup-comment {
+            font-style: italic;
+            color: #666;
+            margin: 6px 0;
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+        
+        .popup-stops {
+            color: #8B5CF6;
+            font-weight: 500;
+            margin: 4px 0;
+            font-size: 0.8rem;
+        }
+        
+        .popup-meta {
+            color: #F59E0B;
+            font-size: 0.8rem;
+            margin: 4px 0;
+        }
+        
+        .popup-tags {
+            color: #8B5CF6;
+            font-size: 0.8rem;
+            margin: 4px 0;
+            font-weight: 500;
+        }
+        
+        .popup-location {
+            color: #8B5CF6;
+            font-weight: 500;
+            margin-top: 6px;
+            font-size: 0.8rem;
+            border-top: 1px solid rgba(139, 92, 246, 0.2);
+            padding-top: 4px;
+        }
+
+        /* Raw data modal styles */
+        .raw-data-modal {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .raw-data-content {
+            background: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .raw-data-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #8B5CF6;
+        }
+
+        .raw-data-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #8B5CF6;
+            margin: 0;
+        }
+
+        .raw-data-close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .raw-data-close:hover {
+            color: #8B5CF6;
+        }
+
+        .raw-data-json {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-x: auto;
+        }
+
+        .note-kind-clickable {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .note-kind-clickable:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+        }
+
+        .note-new {
+            animation: slideInFromTop 0.5s ease-out;
+            border-left: 4px solid #10B981;
+        }
+
+        @keyframes slideInFromTop {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .live-indicator {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: linear-gradient(135deg, #10B981, #059669);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .map-popup .note-preview {
+            font-size: 0.9rem;
+            margin: 5px 0;
+        }
+        
+        .map-popup .note-time {
+            color: #666;
+            font-size: 0.8rem;
+        }
+        
+        
+        .load-more-container {
+            text-align: center;
+            margin: 16px 0;
+        }
+        
+        .load-more-btn {
+            background: linear-gradient(135deg, #8B5CF6, #F59E0B);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: 'Space Grotesk', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+            letter-spacing: -0.01em;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+        
+        .load-more-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+        }
+        
+        .load-more-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .load-more-btn:disabled:hover {
+            transform: none;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+
+        .github-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 4px 8px;
+            border-radius: 8px;
+        }
+
+        .github-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            text-decoration: none;
+        }
+
+        .github-icon {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .map-container {
+                height: 40vh;
+                min-height: 200px;
+            }
+            
+            .notes-container {
+                height: 60vh;
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .note {
+                padding: 15px;
+            }
+            
+            .note-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+        <div class="notes-container">
+            <div class="container">
+                <h1>recent.hitchwiki.org</h1>
+                <div class="npub-display">
+                    <span class="npub-label">Nostr Pubkey:</span>
+                    <div class="npub-container">
+                        <code class="npub-value" id="npubValue">npub12vz4acq3a94qpfc9kwp98wwtces5ej7n0h6d44pwc6dmucyvggyses5uyk</code>
+                        <button class="copy-btn" onclick="copyNpub()" title="Copy to clipboard">
+                            <svg class="copy-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M16 1H4C2.9 1 2 1.9 2 3V17H4V3H16V1ZM19 5H8C6.9 5 6 5.9 6 7V21C6 22.1 6.9 23 8 23H19C20.1 23 21 22.1 21 21V7C21 5.9 20.1 5 19 5ZM19 21H8V7H19V21Z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="notesContainer">
+                    <div class="loading">Loading HitchNotes from Nostr relays...</div>
+                </div>
+                <div id="loadMoreContainer" class="load-more-container" style="display: none;">
+                    <button id="loadMoreBtn" class="load-more-btn">Load More Notes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox for images -->
+    <div id="lightbox" class="lightbox">
+        <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+        <div class="lightbox-nav lightbox-prev" onclick="previousImage()">&#10094;</div>
+        <div class="lightbox-nav lightbox-next" onclick="nextImage()">&#10095;</div>
+        <img id="lightbox-img" class="lightbox-content" src="" alt="">
+    </div>
+
+
+    <!-- Live indicator -->
+    <div id="liveIndicator" class="live-indicator" style="display: none;">
+        🔴 LIVE
+    </div>
+
+
+    <!-- Raw data modal -->
+    <div id="rawDataModal" class="raw-data-modal">
+        <div class="raw-data-content">
+            <div class="raw-data-header">
+                <h2 class="raw-data-title">Raw Nostr Data</h2>
+                <span class="raw-data-close" onclick="closeRawDataModal()">&times;</span>
+            </div>
+            <div id="rawDataJson" class="raw-data-json"></div>
+        </div>
+    </div>
+
+    <script type="module">
+
+        // Minimal bech32 encoder to turn hex pubkeys into npub identifiers.
+        const BECH32_CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+
+        function bech32Polymod(values) {
+            let chk = 1;
+            for (const value of values) {
+                const top = chk >>> 25;
+                chk = ((chk & 0x1ffffff) << 5) ^ value;
+                if (top & 0x01) chk ^= 0x3b6a57b2;
+                if (top & 0x02) chk ^= 0x26508e6d;
+                if (top & 0x04) chk ^= 0x1ea119fa;
+                if (top & 0x08) chk ^= 0x3d4233dd;
+                if (top & 0x10) chk ^= 0x2a1462b3;
+            }
+            return chk;
+        }
+
+        function bech32HrpExpand(hrp) {
+            const ret = [];
+            for (let i = 0; i < hrp.length; i++) {
+                ret.push(hrp.charCodeAt(i) >>> 5);
+            }
+            ret.push(0);
+            for (let i = 0; i < hrp.length; i++) {
+                ret.push(hrp.charCodeAt(i) & 31);
+            }
+            return ret;
+        }
+
+        function bech32CreateChecksum(hrp, data) {
+            const values = bech32HrpExpand(hrp).concat(data, [0, 0, 0, 0, 0, 0]);
+            const polymod = bech32Polymod(values) ^ 1;
+            const result = [];
+            for (let i = 0; i < 6; i++) {
+                result.push((polymod >>> (5 * (5 - i))) & 31);
+            }
+            return result;
+        }
+
+        function bech32Encode(hrp, data) {
+            const combined = data.concat(bech32CreateChecksum(hrp, data));
+            let ret = hrp + '1';
+            for (const value of combined) {
+                ret += BECH32_CHARSET[value];
+            }
+            return ret;
+        }
+
+        function convertBits(data, fromBits, toBits, pad = true) {
+            let acc = 0;
+            let bits = 0;
+            const ret = [];
+            const maxv = (1 << toBits) - 1;
+            for (const value of data) {
+                if (value < 0 || value >>> fromBits !== 0) {
+                    return null;
+                }
+                acc = (acc << fromBits) | value;
+                bits += fromBits;
+                while (bits >= toBits) {
+                    bits -= toBits;
+                    ret.push((acc >>> bits) & maxv);
+                }
+            }
+            if (pad) {
+                if (bits > 0) {
+                    ret.push((acc << (toBits - bits)) & maxv);
+                }
+            } else if (bits >= fromBits || ((acc << (toBits - bits)) & maxv)) {
+                return null;
+            }
+            return ret;
+        }
+
+        function hexToBytes(hex) {
+            if (!hex || typeof hex !== 'string') return null;
+            const normalized = hex.trim().toLowerCase();
+            if (normalized.length % 2 !== 0) return null;
+            const bytes = [];
+            for (let i = 0; i < normalized.length; i += 2) {
+                const byte = parseInt(normalized.slice(i, i + 2), 16);
+                if (Number.isNaN(byte)) {
+                    return null;
+                }
+                bytes.push(byte);
+            }
+            return bytes;
+        }
+
+        function hexToNpub(hex) {
+            const bytes = hexToBytes(hex);
+            if (!bytes) return null;
+            const words = convertBits(bytes, 8, 5);
+            if (!words) return null;
+            return bech32Encode('npub', words);
+        }
+
+        class NostrNotesApp {
+            constructor() {
+                this.relays = [
+                    'wss://relay.hitchwiki.org',
+                    'wss://relay.trustroots.org'
+                ];
+                this.notes = [];
+                this.map = null;
+                this.clusterGroup = null;
+                this.currentLimit = 1000; // Increased limit to fetch more notes
+                this.isLoading = false;
+                this.lastNoteTimestamp = null;
+                this.cacheKey = 'hitchwiki_notes_cache';
+                this.cacheExpiry = 5 * 60 * 1000; // 5 minutes in milliseconds
+                this.relayStatus = {};
+                this.websockets = {}; // Store WebSocket connections
+                this.subscriptionIds = {}; // Store subscription IDs for each relay
+                this.npubCache = new Map(); // Cache hex -> npub conversions
+                this.init();
+            }
+
+            async init() {
+                try {
+                    this.initMap();
+                    this.setupEventListeners();
+                    this.initializeRelayStatus();
+                    await this.connectToRelays();
+                } catch (error) {
+                    this.displayError('Failed to connect to relays: ' + error.message);
+                }
+            }
+
+            setupEventListeners() {
+                const loadMoreBtn = document.getElementById('loadMoreBtn');
+                loadMoreBtn.addEventListener('click', () => {
+                    this.loadMoreNotes();
+                });
+            }
+
+            initMap() {
+                // Initialize Leaflet map with global view
+                this.map = L.map('map').setView([0, 0], 2);
+                
+                // Add custom styled map tiles with purple/yellow theme
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors',
+                    className: 'custom-map-tiles'
+                }).addTo(this.map);
+
+                this.clusterGroup = L.markerClusterGroup({
+                    showCoverageOnHover: false,
+                    spiderfyOnMaxZoom: true,
+                    maxClusterRadius: 50,
+                    iconCreateFunction: (cluster) => {
+                        const count = cluster.getChildCount();
+                        let sizeClass = 'small';
+                        if (count >= 100) {
+                            sizeClass = 'large';
+                        } else if (count >= 25) {
+                            sizeClass = 'medium';
+                        }
+                        return L.divIcon({
+                            html: `<div><span>${count}</span></div>`,
+                            className: `marker-cluster marker-cluster-${sizeClass}`,
+                            iconSize: L.point(sizeClass === 'large' ? 52 : sizeClass === 'medium' ? 44 : 36, sizeClass === 'large' ? 52 : sizeClass === 'medium' ? 44 : 36)
+                        });
+                    }
+                });
+                this.map.addLayer(this.clusterGroup);
+                
+                // Add custom CSS for map styling
+                this.styleMap();
+                
+                console.log('Map initialized');
+            }
+
+            
+            styleMap() {
+                // Add custom CSS for map theming
+                const style = document.createElement('style');
+                style.textContent = `
+                    .custom-map-tiles {
+                        filter: hue-rotate(60deg) saturate(1.5) brightness(1.1) contrast(0.9);
+                    }
+                    .leaflet-container {
+                        background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+                    }
+                    .leaflet-control-zoom a {
+                        background: rgba(255, 255, 255, 0.9);
+                        color: #8B5CF6;
+                        border: 1px solid rgba(139, 92, 246, 0.3);
+                        backdrop-filter: blur(10px);
+                    }
+                    .leaflet-control-zoom a:hover {
+                        background: linear-gradient(135deg, #8B5CF6, #F59E0B);
+                        color: white;
+                    }
+                    .leaflet-popup-content-wrapper {
+                        background: rgba(255, 255, 255, 0.95);
+                        backdrop-filter: blur(10px);
+                        border-radius: 12px;
+                        border: 1px solid rgba(139, 92, 246, 0.2);
+                        box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3);
+                    }
+                    .leaflet-popup-tip {
+                        background: rgba(255, 255, 255, 0.95);
+                        border: 1px solid rgba(139, 92, 246, 0.2);
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            async connectToRelays() {
+                const notesContainer = document.getElementById('notesContainer');
+                notesContainer.innerHTML = '<div class="loading">Connecting to Nostr relays for HitchNotes...</div>';
+
+                // Connect to each relay with persistent WebSocket
+                for (const relayUrl of this.relays) {
+                    this.connectToRelay(relayUrl);
+                }
+            }
+
+            connectToRelay(relayUrl) {
+                console.log(`Connecting to ${relayUrl}...`);
+                this.updateRelayStatus(relayUrl, 'connecting');
+
+                try {
+                    const ws = new WebSocket(relayUrl);
+                    this.websockets[relayUrl] = ws;
+                    
+                    // Generate unique subscription ID
+                    const subscriptionId = "hitchnotes-live-" + Math.random().toString(36).substr(2, 9);
+                    this.subscriptionIds[relayUrl] = subscriptionId;
+
+                    ws.onopen = () => {
+                        console.log(`Connected to ${relayUrl}`);
+                        this.updateRelayStatus(relayUrl, 'connected');
+                        
+                        // Subscribe to all kinds of events (excluding kind 443 as before)
+                        const filters = {
+                            "limit": this.currentLimit
+                        };
+                        
+                        const subscription = [
+                            "REQ",
+                            subscriptionId,
+                            filters
+                        ];
+                        
+                        console.log(`Sending subscription to ${relayUrl}:`, subscription);
+                        ws.send(JSON.stringify(subscription));
+                    };
+
+                    ws.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            console.log(`Received from ${relayUrl}:`, data);
+                            
+                            if (Array.isArray(data)) {
+                                const [messageType, subId, eventData] = data;
+                                
+                                if (messageType === 'EVENT' && eventData && subId === subscriptionId) {
+                                    // Skip kind 443 (hitchhiking trips) as requested
+                                    if (eventData.kind === 443) {
+                                        console.log(`Skipping kind 443 event from ${relayUrl}`);
+                                        return;
+                                    }
+                                    
+                                    console.log(`Adding event kind ${eventData.kind} from ${relayUrl}:`, eventData);
+                                    this.addNewNote(eventData);
+                                    this.updateRelayStatus(relayUrl, 'connected', this.notes.length);
+                                } else if (messageType === 'EOSE' && subId === subscriptionId) {
+                                    // End of stored events - initial load complete
+                                    console.log(`EOSE received from ${relayUrl}, initial load complete`);
+                                    this.updateRelayStatus(relayUrl, 'connected', this.notes.length);
+                                    
+                                    // Show initial stats and hide loading
+                                    if (this.notes.length > 0) {
+                                        this.displayStats(this.notes);
+                                        this.showLoadMoreButton();
+                                    }
+                                } else if (messageType === 'NOTICE') {
+                                    console.log(`Notice from ${relayUrl}:`, eventData);
+                                }
+                            } else {
+                                // Handle non-array messages (like old format)
+                                if (data.type === 'EVENT' && data.event) {
+                                    const event = data.event;
+                                    if (event.kind !== 443) {
+                                        console.log(`Adding event kind ${event.kind} from ${relayUrl}:`, event);
+                                        this.addNewNote(event);
+                                    }
+                                } else if (data.type === 'EOSE') {
+                                    console.log(`EOSE received from ${relayUrl}, initial load complete`);
+                                    this.updateRelayStatus(relayUrl, 'connected', this.notes.length);
+                                    
+                                    if (this.notes.length > 0) {
+                                        this.displayStats(this.notes);
+                                        this.showLoadMoreButton();
+                                    }
+                                } else if (data.type === 'NOTICE') {
+                                    console.log(`Notice from ${relayUrl}:`, data.message);
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Error parsing message from', relayUrl, ':', e);
+                        }
+                    };
+
+                    ws.onerror = (error) => {
+                        console.error(`Error connecting to ${relayUrl}:`, error);
+                        this.updateRelayStatus(relayUrl, 'disconnected');
+                    };
+
+                    ws.onclose = () => {
+                        console.log(`Connection to ${relayUrl} closed`);
+                        this.updateRelayStatus(relayUrl, 'disconnected');
+                        
+                        // Attempt to reconnect after 5 seconds
+                        setTimeout(() => {
+                            console.log(`Attempting to reconnect to ${relayUrl}...`);
+                            this.connectToRelay(relayUrl);
+                        }, 5000);
+                    };
+                } catch (error) {
+                    console.error(`Failed to connect to ${relayUrl}:`, error);
+                    this.updateRelayStatus(relayUrl, 'disconnected');
+                }
+            }
+
+            addNewNote(note) {
+                // Check if note already exists
+                if (this.notes.find(n => n.id === note.id)) {
+                    console.log(`Note ${note.id} already exists, skipping`);
+                    return;
+                }
+
+                // Add note to the array
+                this.notes.push(note);
+                
+                // Sort notes by created_at timestamp (newest first)
+                this.notes.sort((a, b) => b.created_at - a.created_at);
+                
+                // Keep only the most recent 1000 notes to prevent memory issues
+                if (this.notes.length > 1000) {
+                    this.notes = this.notes.slice(0, 1000);
+                }
+
+                // Show live indicator
+                const liveIndicator = document.getElementById('liveIndicator');
+                if (liveIndicator) {
+                    liveIndicator.style.display = 'block';
+                    // Hide after 3 seconds
+                    setTimeout(() => {
+                        liveIndicator.style.display = 'none';
+                    }, 3000);
+                }
+
+                // Update display
+                this.displayNotes(this.notes);
+                this.plotNotesOnMap(this.notes);
+                
+                // Add visual effect to the new note
+                setTimeout(() => {
+                    const noteElement = document.querySelector(`[data-note-id="${note.id}"]`);
+                    if (noteElement) {
+                        noteElement.classList.add('note-new');
+                        // Remove the class after animation
+                        setTimeout(() => {
+                            noteElement.classList.remove('note-new');
+                        }, 500);
+                    }
+                }, 100);
+                
+                console.log(`Added new note: ${note.id}, total notes: ${this.notes.length}`);
+            }
+
+            async fetchFromRelay(relayUrl, since = null, until = null) {
+                return new Promise((resolve, reject) => {
+                    const notes = [];
+                    let timeout;
+                    let ws;
+
+                    const cleanup = () => {
+                        clearTimeout(timeout);
+                        if (ws) {
+                            ws.close();
+                        }
+                    };
+
+                    timeout = setTimeout(() => {
+                        cleanup();
+                        resolve(notes);
+                    }, 10000); // 10 second timeout
+
+                    try {
+                        ws = new WebSocket(relayUrl);
+                        
+                        ws.onopen = () => {
+                            console.log(`Connected to ${relayUrl}`);
+                            this.updateRelayStatus(relayUrl, 'connected');
+                            
+                            // Subscribe to all kinds of events using Nostr protocol (excluding kind 443)
+                            const subscriptionId = "hitchnotes-" + Math.random().toString(36).substr(2, 9);
+                            const filters = {
+                                "limit": this.currentLimit
+                            };
+                            
+                            // Add since parameter if provided
+                            if (since) {
+                                filters.since = since;
+                            }
+                            
+                            // Add until parameter if provided
+                            if (until) {
+                                filters.until = until;
+                            }
+                            
+                            const subscription = [
+                                "REQ",
+                                subscriptionId,
+                                filters
+                            ];
+                            
+                            console.log(`Sending subscription to ${relayUrl}:`, subscription);
+                            
+                            ws.send(JSON.stringify(subscription));
+                        };
+
+                        ws.onmessage = (event) => {
+                            try {
+                                const data = JSON.parse(event.data);
+                                console.log(`Received from ${relayUrl}:`, data);
+                                
+                                // Nostr protocol uses arrays: ["EVENT", subscription_id, event] or ["EOSE", subscription_id]
+                                if (Array.isArray(data)) {
+                                    const [messageType, subscriptionId, eventData] = data;
+                                    
+                                if (messageType === 'EVENT' && eventData) {
+                                    // Skip kind 443 (hitchhiking trips) as requested
+                                    if (eventData.kind === 443) {
+                                        console.log(`Skipping kind 443 event from ${relayUrl}`);
+                                        return;
+                                    }
+                                    console.log(`Adding event kind ${eventData.kind} from ${relayUrl}:`, eventData);
+                                    notes.push(eventData);
+                                    this.updateRelayStatus(relayUrl, 'connected', notes.length);
+                                    } else if (messageType === 'EOSE') {
+                                        // End of stored events
+                                        console.log(`EOSE received from ${relayUrl}, found ${notes.length} events`);
+                                        this.updateRelayStatus(relayUrl, 'connected', notes.length);
+                                        cleanup();
+                                        resolve(notes);
+                                    } else if (messageType === 'NOTICE') {
+                                        console.log(`Notice from ${relayUrl}:`, eventData);
+                                    }
+                                } else {
+                                    // Handle non-array messages (like old format)
+                                    if (data.type === 'EVENT' && data.event) {
+                                        const event = data.event;
+                        // Don't skip any kinds - we want to display all types including geo data
+                                        console.log(`Adding event kind ${event.kind} from ${relayUrl}:`, event);
+                                        notes.push(event);
+                                    } else if (data.type === 'EOSE') {
+                                        console.log(`EOSE received from ${relayUrl}, found ${notes.length} events`);
+                                        cleanup();
+                                        resolve(notes);
+                                    } else if (data.type === 'NOTICE') {
+                                        console.log(`Notice from ${relayUrl}:`, data.message);
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('Error parsing message from', relayUrl, ':', e);
+                            }
+                        };
+
+                        ws.onerror = (error) => {
+                            console.error(`Error connecting to ${relayUrl}:`, error);
+                            this.updateRelayStatus(relayUrl, 'disconnected');
+                            cleanup();
+                            resolve(notes); // Return what we have so far
+                        };
+
+                        ws.onclose = () => {
+                            this.updateRelayStatus(relayUrl, 'disconnected');
+                            cleanup();
+                            resolve(notes);
+                        };
+                    } catch (error) {
+                        console.error(`Failed to connect to ${relayUrl}:`, error);
+                        cleanup();
+                        resolve(notes);
+                    }
+                });
+            }
+
+            removeDuplicates(notes) {
+                const seen = new Set();
+                return notes.filter(note => {
+                    if (seen.has(note.id)) {
+                        return false;
+                    }
+                    seen.add(note.id);
+                    return true;
+                });
+            }
+
+            displayNotes(notes) {
+                const notesContainer = document.getElementById('notesContainer');
+                
+                if (notes.length === 0) {
+                    notesContainer.innerHTML = '<div class="loading">No HitchNotes found. Check the browser console for debug information.</div>';
+                    return;
+                }
+
+                // Clear loading message if present
+                const loadingDiv = notesContainer.querySelector('.loading');
+                if (loadingDiv) {
+                    loadingDiv.remove();
+                }
+
+                // Sort notes by created_at timestamp (newest first)
+                const sortedNotes = [...notes].sort((a, b) => b.created_at - a.created_at);
+
+                // Clear existing notes
+                notesContainer.innerHTML = '';
+
+                sortedNotes.forEach(note => {
+                    console.log('Processing note:', note);
+                    const noteDiv = document.createElement('div');
+                    noteDiv.className = 'note';
+                    noteDiv.setAttribute('data-note-id', note.id); // Add data attribute for identification
+                    
+                    try {
+                        const timestamp = new Date(note.created_at * 1000);
+                        const timeString = this.formatTime(timestamp);
+                        const relativeTime = this.getRelativeTime(timestamp);
+                        
+                        let renderedHtml = '';
+                        
+                        // Special handling for different event kinds
+                        if (note.kind === 0) {
+                            // Profile metadata
+                            console.log('Rendering profile note');
+                            renderedHtml = this.renderProfileNote(note, timeString, relativeTime);
+                        } else if (note.kind === 443 || note.kind === 36820) {
+                            // Hitchhiking trip data (both old and new formats)
+                            console.log('Rendering trip note, kind:', note.kind);
+                            renderedHtml = this.renderHitchhikingTrip(note, timeString, relativeTime);
+                        } else {
+                            // Regular note (text notes, images, etc.)
+                            console.log('Rendering text note, kind:', note.kind);
+                            renderedHtml = this.renderTextNote(note, timeString, relativeTime);
+                        }
+                        
+                        // Ensure we have valid HTML
+                        if (renderedHtml && typeof renderedHtml === 'string' && renderedHtml.trim().length > 0) {
+                            noteDiv.innerHTML = renderedHtml;
+                        } else {
+                            // Fallback rendering
+                            console.warn('Fallback rendering for note:', note);
+                            noteDiv.innerHTML = this.renderFallbackNote(note, timeString, relativeTime);
+                        }
+                    } catch (error) {
+                        console.error('Error rendering note:', error, note);
+                        noteDiv.innerHTML = this.renderFallbackNote(note, timeString, relativeTime);
+                    }
+                    
+                    notesContainer.appendChild(noteDiv);
+                });
+            }
+
+            displayStats(notes) {
+                let statsDiv = document.getElementById('statsBox');
+                
+                // Create stats box if it doesn't exist
+                if (!statsDiv) {
+                    statsDiv = document.createElement('div');
+                    statsDiv.id = 'statsBox';
+                    statsDiv.className = 'stats';
+                    document.body.appendChild(statsDiv);
+                }
+                
+                // Count notes with geo information
+                let geoNotesCount = 0;
+                notes.forEach(note => {
+                    const geo = this.extractGeoLocation(note);
+                    if (geo) {
+                        geoNotesCount++;
+                    }
+                });
+
+                // Generate relay status HTML
+                const relayStatusHtml = this.relays.map(relayUrl => {
+                    const status = this.relayStatus[relayUrl];
+                    const relayName = relayUrl.replace('wss://', '').replace('wss://', '');
+                    const statusClass = `relay-${status.status}`;
+                    const statusText = status.status.charAt(0).toUpperCase() + status.status.slice(1);
+                    
+                    let statsText = '';
+                    if (status.notesCount > 0) {
+                        statsText = `${status.notesCount} notes`;
+                    }
+                    if (status.connectionTime) {
+                        const connectionAge = Math.floor((new Date() - status.connectionTime) / 1000);
+                        if (connectionAge < 60) {
+                            statsText += statsText ? ` • ${connectionAge}s` : `${connectionAge}s`;
+                        }
+                    }
+
+                    return `
+                        <div class="relay-item">
+                            <div class="relay-status-indicator ${statusClass}"></div>
+                            <div class="relay-name">${relayName}</div>
+                            <div class="relay-stats">${statsText}</div>
+                        </div>
+                    `;
+                }).join('');
+                
+                statsDiv.innerHTML = `
+                    <div class="stats-section">
+                        <h3>📊 Statistics</h3>
+                        <p><strong>${notes.length}</strong> total notes loaded</p>
+                        <p><strong>${geoNotesCount}</strong> notes with geo info</p>
+                    </div>
+                    <div class="stats-section">
+                        <h3>🌐 Relays</h3>
+                        ${relayStatusHtml}
+                    </div>
+                    <div class="stats-section">
+                        <a href="https://github.com/Hitchwiki/recent.hitchwiki.org" target="_blank" rel="noopener noreferrer" class="github-link">
+                            <svg class="github-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.548-1.304.997-1.304-3.58-.407-7.34-1.789-7.34-7.969 0-1.76.627-3.197 1.655-4.325-.165-.407-.715-2.04.157-4.251 0 0 1.35-.432 4.425 1.653 1.283-.356 2.659-.535 4.025-.541 1.366.006 2.742.185 4.025.541 3.075-2.085 4.425-1.653 4.425-1.653.872 2.211.322 3.844.157 4.251 1.028 1.128 1.655 2.565 1.655 4.325 0 6.19-3.76 7.562-7.34 7.969.576.498 1.089 1.475 1.089 2.975v4.425c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                            </svg>
+                            GitHub
+                        </a>
+                    </div>
+                `;
+            }
+
+            formatTime(date) {
+                return date.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            }
+
+            getRelativeTime(date) {
+                const now = new Date();
+                const diffInSeconds = Math.floor((now - date) / 1000);
+                
+                if (diffInSeconds < 60) return 'just now';
+                if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+                if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+                if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+                
+                return date.toLocaleDateString();
+            }
+
+            getFullNpub(pubkey) {
+                if (!pubkey) return null;
+                if (this.npubCache.has(pubkey)) {
+                    return this.npubCache.get(pubkey);
+                }
+                const npub = hexToNpub(pubkey);
+                if (npub) {
+                    this.npubCache.set(pubkey, npub);
+                }
+                return npub;
+            }
+
+            getPubkeyDisplay(pubkey) {
+                const fullNpub = this.getFullNpub(pubkey);
+                if (fullNpub) {
+                    return {
+                        short: `${fullNpub.substring(0, 16)}...`,
+                        full: fullNpub
+                    };
+                }
+                if (!pubkey) {
+                    return {
+                        short: 'Unknown',
+                        full: 'Unknown'
+                    };
+                }
+                return {
+                    short: `${pubkey.substring(0, 16)}...`,
+                    full: pubkey
+                };
+            }
+
+            renderProfileNote(note, timeString, relativeTime) {
+                try {
+                    const profile = JSON.parse(note.content);
+                    const displayName = profile.display_name || profile.name || 'Anonymous';
+                    const pubkeyDisplay = this.getPubkeyDisplay(note.pubkey);
+                    const username = profile.name || pubkeyDisplay.short;
+                    const about = profile.about || '';
+                    const website = profile.website || '';
+                    const lud16 = profile.lud16 || '';
+                    const nip05 = profile.nip05 || '';
+                    
+                    const links = [];
+                    if (website) links.push(`<a href="${website}" class="profile-link" target="_blank">🌐 Website</a>`);
+                    if (lud16) links.push(`<a href="lightning:${lud16}" class="profile-link">⚡ ${lud16}</a>`);
+                    if (nip05) links.push(`<span class="profile-link">✓ ${nip05}</span>`);
+                    
+                    return `
+                        <div class="profile-card">
+                            <div class="profile-banner" style="background-image: url('${profile.banner || ''}')"></div>
+                            <div class="profile-avatar" style="background-image: url('${profile.picture || ''}')"></div>
+                            <div class="profile-content">
+                                <div class="profile-name">${this.escapeHtml(displayName)}</div>
+                                <div class="profile-username">@${this.escapeHtml(username)}</div>
+                                ${about ? `<div class="profile-about">${this.escapeHtml(about)}</div>` : ''}
+                                ${links.length > 0 ? `<div class="profile-links">${links.join('')}</div>` : ''}
+                                <div class="profile-meta">
+                                    <span style="font-size: 0.85rem; opacity: 0.8;" title="${pubkeyDisplay.full}">${pubkeyDisplay.short}</span>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <span style="font-size: 0.85rem; opacity: 0.8;" title="${timeString}">${relativeTime}</span>
+                                        <span class="note-kind note-kind-clickable" onclick="showRawData('${note.id}')">Profile (Kind ${note.kind})</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } catch (e) {
+                    // Fallback to regular note display if JSON parsing fails
+                    const pubkeyDisplay = this.getPubkeyDisplay(note.pubkey);
+                    return `
+                        <div class="note-header">
+                            <span class="note-author" title="${pubkeyDisplay.full}">${pubkeyDisplay.short}</span>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span class="note-time" title="${timeString}">${relativeTime}</span>
+                                <span class="note-kind">Kind ${note.kind}</span>
+                            </div>
+                        </div>
+                        <div class="note-content">${this.escapeHtml(note.content)}</div>
+                    `;
+                }
+            }
+
+            renderHitchhikingTrip(note, timeString, relativeTime) {
+                try {
+                    const trip = JSON.parse(note.content);
+                    const rating = trip.rating || 0;
+                    const comment = trip.comment || '';
+                    const hitchhikers = trip.hitchhikers || [];
+                    const stops = trip.stops || [];
+                    const source = trip.source || '';
+                    const submissionTime = trip.submission_time || '';
+                    
+                    const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+                    
+                    const stopsHtml = stops.map((stop, index) => {
+                        const lat = stop.location?.latitude?.toFixed(6) || 'N/A';
+                        const lng = stop.location?.longitude?.toFixed(6) || 'N/A';
+                        const isExact = stop.location?.is_exact ? '📍' : '📍';
+                        const departureTime = stop.departure_time ? new Date(stop.departure_time).toLocaleString() : '';
+                        const waitingDuration = stop.waiting_duration || '';
+                        
+                        return `
+                            <div class="trip-stop">
+                                <div class="stop-location">${isExact} Stop ${index + 1}</div>
+                                <div class="stop-coords">${lat}, ${lng}</div>
+                                ${departureTime ? `<div class="stop-time">Departure: ${departureTime}</div>` : ''}
+                                ${waitingDuration ? `<div class="stop-time">Wait time: ${waitingDuration}</div>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    const hitchhikersHtml = hitchhikers.map(h => 
+                        `<span class="hitchhiker-tag">${this.escapeHtml(h.nickname || 'Anonymous')}</span>`
+                    ).join('');
+                    
+                    const pubkeyDisplay = this.getPubkeyDisplay(note.pubkey);
+
+                    return `
+                        <div class="trip-card">
+                            <div class="trip-header">
+                                <div class="trip-title">🚗 Hitchhiking Trip</div>
+                                <div class="trip-rating">${stars} ${rating}/5</div>
+                            </div>
+                            
+                            ${stops.length > 0 ? `
+                                <div class="trip-stops">
+                                    ${stopsHtml}
+                                </div>
+                            ` : ''}
+                            
+                            ${comment ? `
+                                <div class="trip-comment">
+                                    "${this.escapeHtml(comment)}"
+                                </div>
+                            ` : ''}
+                            
+                            <div class="trip-meta">
+                                <div>
+                                    ${hitchhikers.length > 0 ? `
+                                        <div class="trip-hitchhikers">
+                                            <strong>Hitchhikers:</strong> ${hitchhikersHtml}
+                                        </div>
+                                    ` : ''}
+                                    ${source ? `<div>Source: ${this.escapeHtml(source)}</div>` : ''}
+                                </div>
+                                <div style="text-align: right;">
+                                    <div title="${pubkeyDisplay.full}">${pubkeyDisplay.short}</div>
+                                    <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                                        <span title="${timeString}">${relativeTime}</span>
+                                        <span class="note-kind note-kind-clickable" onclick="showRawData('${note.id}')">Trip (Kind ${note.kind})</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } catch (e) {
+                    // Fallback to regular note display if JSON parsing fails
+                    const pubkeyDisplay = this.getPubkeyDisplay(note.pubkey);
+                    return `
+                        <div class="note-header">
+                            <span class="note-author" title="${pubkeyDisplay.full}">${pubkeyDisplay.short}</span>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <span class="note-time" title="${timeString}">${relativeTime}</span>
+                                <span class="note-kind">Kind ${note.kind}</span>
+                            </div>
+                        </div>
+                        <div class="note-content">${this.escapeHtml(note.content)}</div>
+                    `;
+                }
+            }
+
+            renderTextNote(note, timeString, relativeTime) {
+                // Extract images from imeta tags
+                const images = [];
+                if (note.tags) {
+                    note.tags.forEach(tag => {
+                        if (tag[0] === 'imeta' && tag[1] && tag[1].startsWith('url ')) {
+                            const imageUrl = tag[1].substring(4); // Remove 'url ' prefix
+                            const blurhash = tag[2] || '';
+                            const dimensions = tag[3] || '';
+                            images.push({ url: imageUrl, blurhash, dimensions });
+                        }
+                    });
+                }
+                
+                // Extract hashtags from 't' tags
+                const hashtags = [];
+                if (note.tags) {
+                    note.tags.forEach(tag => {
+                        if (tag[0] === 't' && tag[1]) {
+                            hashtags.push(tag[1]);
+                        }
+                    });
+                }
+                
+                // Process content to handle hashtags and links
+                let processedContent = this.escapeHtml(note.content || '');
+                
+                // Convert line breaks to HTML
+                processedContent = processedContent.replace(/\n/g, '<br>');
+                
+                // Convert hashtags in content to styled spans (more comprehensive pattern)
+                processedContent = processedContent.replace(/#([a-zA-Z0-9_]+)/g, '<span class="hashtag-inline">#$1</span>');
+                
+                // Convert URLs to clickable links (but exclude image URLs that are already handled)
+                const imageUrls = images.map(img => img.url);
+                processedContent = processedContent.replace(/(https?:\/\/[^\s]+)/g, (url) => {
+                    if (imageUrls.includes(url)) {
+                        return ''; // Remove image URLs from content since they're displayed separately
+                    }
+                    return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="content-link">${url}</a>`;
+                });
+                
+                const imagesHtml = images.length > 0 ? `
+                    <div class="note-images">
+                        ${images.map((img, index) => `
+                            <div class="note-image loading" onclick="openLightbox(${index}, [${images.map(i => `'${i.url}'`).join(',')}])">
+                                ${img.blurhash ? `<div class="blurhash-placeholder">🖼️ Loading image...</div>` : ''}
+                                <div class="image-loading" style="display: ${img.blurhash ? 'none' : 'block'}">⏳ Loading...</div>
+                                <img src="${img.url}" alt="Image" loading="lazy" 
+                                     onload="this.parentElement.classList.remove('loading'); this.parentElement.classList.add('loaded'); this.parentElement.querySelector('.blurhash-placeholder')?.remove(); this.parentElement.querySelector('.image-loading')?.remove();"
+                                     onerror="this.parentElement.classList.remove('loading'); this.parentElement.innerHTML='<div class=\\'image-error\\'>❌ Failed to load image</div>';" 
+                                     style="max-width: 100%; height: auto; border-radius: 8px;" />
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '';
+                
+                const hashtagsHtml = hashtags.length > 0 ? `
+                    <div class="note-hashtags">
+                        ${hashtags.map(tag => `<span class="hashtag">#${this.escapeHtml(tag)}</span>`).join('')}
+                    </div>
+                ` : '';
+                
+                const pubkeyDisplay = this.getPubkeyDisplay(note.pubkey);
+
+                return `
+                    <div class="note-header">
+                        <span class="note-author" title="${pubkeyDisplay.full}">${pubkeyDisplay.short}</span>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <span class="note-time" title="${timeString}">${relativeTime}</span>
+                            <span class="note-kind note-kind-clickable" onclick="showRawData('${note.id}')">📝 Note (Kind ${note.kind})</span>
+                        </div>
+                    </div>
+                    <div class="note-content">${processedContent}</div>
+                    ${imagesHtml}
+                    ${hashtagsHtml}
+                `;
+            }
+
+            renderFallbackNote(note, timeString, relativeTime) {
+                // Safe fallback rendering for any note type
+                const pubkeyDisplay = this.getPubkeyDisplay(note.pubkey);
+                return `
+                    <div class="note-header">
+                        <span class="note-author" title="${pubkeyDisplay.full}">${pubkeyDisplay.short}</span>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <span class="note-time" title="${timeString}">${relativeTime}</span>
+                            <span class="note-kind">Kind ${note.kind || 'Unknown'}</span>
+                        </div>
+                    </div>
+                    <div class="note-content">${this.escapeHtml(note.content || 'No content')}</div>
+                `;
+            }
+
+            displayError(message) {
+                const notesContainer = document.getElementById('notesContainer');
+                notesContainer.innerHTML = `<div class="error">${message}</div>`;
+            }
+
+            extractGeoLocation(note) {
+                // Extract geo-location from various sources
+                let lat = null;
+                let lng = null;
+                let location = null;
+                
+                // Check for geo tags (NIP-52)
+                if (note.tags) {
+                    for (const tag of note.tags) {
+                        // Check for geohash tags (from hwrecentchanges.py)
+                        if (tag[0] === 'g' && tag[1]) {
+                            // First check if it's direct lat,lng coordinates
+                            const coordMatch = tag[1].match(/^(-?\d+\.?\d*),(-?\d+\.?\d*)$/);
+                            if (coordMatch) {
+                                lat = parseFloat(coordMatch[1]);
+                                lng = parseFloat(coordMatch[2]);
+                                location = `Coordinates: ${tag[1]}`;
+                                break;
+                            }
+                            
+                            // Check if it's a geohash (from hwrecentchanges.py)
+                            if (this.isGeohash(tag[1])) {
+                                const coords = this.geohashToLatLng(tag[1]);
+                                if (coords) {
+                                    lat = coords.lat;
+                                    lng = coords.lng;
+                                    location = `Geohash: ${tag[1]}`;
+                                    break;
+                                }
+                            }
+                            
+                            // Check for Geo URI format: geo:lat,lng
+                            const geoMatch = tag[1].match(/^geo:(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+                            if (geoMatch) {
+                                lat = parseFloat(geoMatch[1]);
+                                lng = parseFloat(geoMatch[2]);
+                                location = tag[2] || `${lat}, ${lng}`;
+                                break;
+                            }
+                        }
+                        
+                        // Check for Open Location Code tags (from hwrecentchanges.py)
+                        if (tag[0] === 'l' && tag[1] && tag[2] === 'open-location-code') {
+                            const coords = this.plusCodeToLatLng(tag[1]);
+                            if (coords) {
+                                lat = coords.lat;
+                                lng = coords.lng;
+                                location = `Plus Code: ${tag[1]}`;
+                                break;
+                            }
+                        }
+                        
+                        // Check for location tags
+                        if (tag[0] === 'location' && tag[1]) {
+                            location = tag[1];
+                        }
+                    }
+                }
+                
+                // Check content for coordinates (various formats)
+                if (!lat || !lng) {
+                    const content = note.content || '';
+                    
+                    // Check for hitchhiking trip data (kind 36820)
+                    if (note.kind === 36820 || note.kind === 443) {
+                        try {
+                            const trip = JSON.parse(content);
+                            if (trip.stops && trip.stops.length > 0) {
+                                // Use the first stop's coordinates
+                                const firstStop = trip.stops[0];
+                                if (firstStop.location && firstStop.location.latitude && firstStop.location.longitude) {
+                                    lat = firstStop.location.latitude;
+                                    lng = firstStop.location.longitude;
+                                    location = `Trip: ${trip.stops.length} stop${trip.stops.length > 1 ? 's' : ''}`;
+                                }
+                            }
+                        } catch (e) {
+                            // JSON parsing failed, continue with other methods
+                        }
+                    }
+                    
+                    // Look for decimal coordinates
+                    const coordMatch = content.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+                    if (coordMatch) {
+                        lat = parseFloat(coordMatch[1]);
+                        lng = parseFloat(coordMatch[2]);
+                    }
+                    
+                    // Look for degree coordinates
+                    const degreeMatch = content.match(/(\d+)°\s*(\d+\.?\d*)[′']?\s*([NS])\s*(\d+)°\s*(\d+\.?\d*)[′']?\s*([EW])/i);
+                    if (degreeMatch) {
+                        const latDeg = parseFloat(degreeMatch[1]);
+                        const latMin = parseFloat(degreeMatch[2]);
+                        const latDir = degreeMatch[3].toUpperCase();
+                        const lngDeg = parseFloat(degreeMatch[4]);
+                        const lngMin = parseFloat(degreeMatch[5]);
+                        const lngDir = degreeMatch[6].toUpperCase();
+                        
+                        lat = latDeg + latMin / 60;
+                        if (latDir === 'S') lat = -lat;
+                        
+                        lng = lngDeg + lngMin / 60;
+                        if (lngDir === 'W') lng = -lng;
+                    }
+                }
+                
+                // Validate coordinates
+                if (lat && lng && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                    return { lat, lng, location: location || `${lat.toFixed(4)}, ${lng.toFixed(4)}` };
+                }
+                
+                return null;
+            }
+
+            // Helper function to check if a string is a geohash
+            isGeohash(str) {
+                // Geohash is base32 encoded (0-9, b-h, j-k, m-n, p-z)
+                return /^[0-9b-hj-km-np-z]+$/.test(str) && str.length >= 1 && str.length <= 12;
+            }
+
+            // Helper function to convert geohash to lat/lng (simplified)
+            geohashToLatLng(geohash) {
+                try {
+                    // This is a simplified geohash decoder
+                    // For production, you'd want to use a proper geohash library
+                    const base32 = "0123456789bcdefghjkmnpqrstuvwxyz";
+                    let isEven = true;
+                    let lat = [-90, 90];
+                    let lng = [-180, 180];
+                    
+                    for (let i = 0; i < geohash.length; i++) {
+                        const char = geohash[i];
+                        const bits = base32.indexOf(char);
+                        
+                        for (let j = 4; j >= 0; j--) {
+                            const bit = (bits >> j) & 1;
+                            
+                            if (isEven) {
+                                const mid = (lng[0] + lng[1]) / 2;
+                                if (bit) {
+                                    lng[0] = mid;
+                                } else {
+                                    lng[1] = mid;
+                                }
+                            } else {
+                                const mid = (lat[0] + lat[1]) / 2;
+                                if (bit) {
+                                    lat[0] = mid;
+                                } else {
+                                    lat[1] = mid;
+                                }
+                            }
+                            
+                            isEven = !isEven;
+                        }
+                    }
+                    
+                    return {
+                        lat: (lat[0] + lat[1]) / 2,
+                        lng: (lng[0] + lng[1]) / 2
+                    };
+                } catch (e) {
+                    console.warn('Error decoding geohash:', geohash, e);
+                    return null;
+                }
+            }
+
+            // Helper function to convert Plus Code to lat/lng (simplified)
+            plusCodeToLatLng(plusCode) {
+                try {
+                    // This is a simplified Plus Code decoder
+                    // For production, you'd want to use the Open Location Code library
+                    // Plus codes are in format like "9C3XGW2F+2V" or "9C3XGW2F"
+                    
+                    // Remove the + and everything after it for basic decoding
+                    const code = plusCode.split('+')[0];
+                    
+                    if (code.length < 8) {
+                        return null; // Need at least 8 characters for meaningful coordinates
+                    }
+                    
+                    // This is a very simplified decoder - in reality you'd use the OLC library
+                    // For now, we'll try to extract some basic coordinates
+                    // This is not accurate but gives a rough idea
+                    
+                    // Extract the first 4 characters for lat/lng
+                    const latCode = code.substring(0, 4);
+                    const lngCode = code.substring(4, 8);
+                    
+                    // Very rough conversion (this is not accurate!)
+                    const lat = (latCode.charCodeAt(0) - 65) * 20 - 90 + 
+                               (latCode.charCodeAt(1) - 65) * 1 + 
+                               (latCode.charCodeAt(2) - 65) * 0.05 + 
+                               (latCode.charCodeAt(3) - 65) * 0.0025;
+                    
+                    const lng = (lngCode.charCodeAt(0) - 65) * 20 - 180 + 
+                               (lngCode.charCodeAt(1) - 65) * 1 + 
+                               (lngCode.charCodeAt(2) - 65) * 0.05 + 
+                               (lngCode.charCodeAt(3) - 65) * 0.0025;
+                    
+                    return { lat, lng };
+                } catch (e) {
+                    console.warn('Error decoding Plus Code:', plusCode, e);
+                    return null;
+                }
+            }
+
+            plotNotesOnMap(notes) {
+                if (!this.clusterGroup) {
+                    return;
+                }
+
+                this.clusterGroup.clearLayers();
+                
+                const geoNotes = [];
+                
+                // Find notes with geo-location data from ALL notes (not just displayed ones)
+                this.notes.forEach(note => {
+                    const geo = this.extractGeoLocation(note);
+                    if (geo) {
+                        geoNotes.push({ note, geo });
+                        console.log(`Found geo note: ${geo.location} (${geo.lat}, ${geo.lng}) - Kind ${note.kind}`);
+                    }
+                });
+                
+                console.log(`Found ${geoNotes.length} notes with geo-location data out of ${this.notes.length} total notes`);
+                
+                if (geoNotes.length === 0) {
+                    return;
+                }
+                
+                // Create markers for each geo-located note
+                geoNotes.forEach(({ note, geo }, index) => {
+                    const marker = L.marker([geo.lat, geo.lng], {
+                        icon: L.divIcon({
+                            className: 'map-marker',
+                            html: '📍',
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 15]
+                        })
+                    });
+                    
+                    // Create popup content based on note type
+                    let popupContent = '';
+                    
+                    if (note.kind === 36820 || note.kind === 443) {
+                        // Hitchhiking trip data
+                        try {
+                            const trip = JSON.parse(note.content);
+                            const rating = trip.rating || 0;
+                            const comment = trip.comment || '';
+                            const stops = trip.stops || [];
+                            const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating);
+                            
+                            popupContent = `
+                                <div class="map-popup">
+                                    <div class="note-title">🚗 Hitchhiking Trip (Kind ${note.kind})</div>
+                                    <div class="popup-rating">${stars} ${rating}/5</div>
+                                    ${comment ? `<div class="popup-comment">"${this.escapeHtml(comment.substring(0, 100))}${comment.length > 100 ? '...' : ''}"</div>` : ''}
+                                    <div class="popup-stops">📍 ${stops.length} stop${stops.length > 1 ? 's' : ''}</div>
+                                    <div class="note-time">${this.getRelativeTime(new Date(note.created_at * 1000))}</div>
+                                    <div class="popup-location">📍 ${geo.location}</div>
+                                </div>
+                            `;
+                        } catch (e) {
+                            // Fallback for trip data
+                            popupContent = `
+                                <div class="map-popup">
+                                    <div class="note-title">🚗 Trip Data (Kind ${note.kind})</div>
+                                    <div class="note-preview">${this.escapeHtml(note.content?.substring(0, 100) || 'No content')}${note.content?.length > 100 ? '...' : ''}</div>
+                                    <div class="note-time">${this.getRelativeTime(new Date(note.created_at * 1000))}</div>
+                                    <div class="popup-location">📍 ${geo.location}</div>
+                                </div>
+                            `;
+                        }
+                    } else if (note.kind === 1) {
+                        // Text note with images/hashtags
+                        const hashtags = note.tags?.filter(tag => tag[0] === 't').map(tag => tag[1]) || [];
+                        const hasImages = note.tags?.some(tag => tag[0] === 'imeta') || false;
+                        
+                        popupContent = `
+                            <div class="map-popup">
+                                <div class="note-title">📝 HitchNote (Kind ${note.kind})</div>
+                                <div class="note-preview">${this.escapeHtml(note.content?.substring(0, 100) || 'No content')}${note.content?.length > 100 ? '...' : ''}</div>
+                                ${hasImages ? '<div class="popup-meta">🖼️ Has images</div>' : ''}
+                                ${hashtags.length > 0 ? `<div class="popup-tags">${hashtags.slice(0, 3).map(tag => `#${tag}`).join(' ')}</div>` : ''}
+                                <div class="note-time">${this.getRelativeTime(new Date(note.created_at * 1000))}</div>
+                                <div class="popup-location">📍 ${geo.location}</div>
+                            </div>
+                        `;
+                    } else {
+                        // Default note
+                        popupContent = `
+                            <div class="map-popup">
+                                <div class="note-title">📍 HitchNote (Kind ${note.kind})</div>
+                                <div class="note-preview">${this.escapeHtml(note.content?.substring(0, 100) || 'No content')}${note.content?.length > 100 ? '...' : ''}</div>
+                                <div class="note-time">${this.getRelativeTime(new Date(note.created_at * 1000))}</div>
+                                <div class="popup-location">📍 ${geo.location}</div>
+                            </div>
+                        `;
+                    }
+                    
+                    marker.bindPopup(popupContent);
+                    this.clusterGroup.addLayer(marker);
+                });
+                
+                // Keep map at global view - no automatic zooming
+                console.log(`Plotted ${geoNotes.length} geo-located notes on map`);
+            }
+
+            async loadMoreNotes() {
+                if (this.isLoading) return;
+                
+                this.isLoading = true;
+                const loadMoreBtn = document.getElementById('loadMoreBtn');
+                const loadMoreContainer = document.getElementById('loadMoreContainer');
+                
+                // Update button state
+                loadMoreBtn.disabled = true;
+                loadMoreBtn.textContent = 'Loading...';
+                
+                try {
+                    // Get the timestamp of the oldest note we have
+                    const oldestNote = this.notes.reduce((oldest, note) => 
+                        note.created_at < oldest.created_at ? note : oldest, this.notes[0]);
+                    const untilTimestamp = oldestNote ? oldestNote.created_at - 1 : null;
+                    
+                    console.log(`Loading more notes until timestamp: ${untilTimestamp}`);
+                    
+                    // Fetch older notes using until parameter
+                    const promises = this.relays.map(relayUrl => this.fetchFromRelay(relayUrl, null, untilTimestamp));
+                    const results = await Promise.allSettled(promises);
+                    
+                    const allNewNotes = [];
+                    results.forEach((result, index) => {
+                        if (result.status === 'fulfilled' && result.value) {
+                            console.log(`Relay ${this.relays[index]} returned ${result.value.length} notes`);
+                            allNewNotes.push(...result.value);
+                        } else {
+                            console.warn(`Failed to fetch from relay ${this.relays[index]}:`, result.reason);
+                        }
+                    });
+                    
+                    console.log(`Total new notes fetched: ${allNewNotes.length}`);
+                    
+                    // Sort and deduplicate with existing notes
+                    const allNotes = [...this.notes, ...allNewNotes];
+                    allNotes.sort((a, b) => b.created_at - a.created_at);
+                    const uniqueNotes = this.removeDuplicates(allNotes);
+                    
+                    // Ensure final array is properly sorted
+                    uniqueNotes.sort((a, b) => b.created_at - a.created_at);
+                    
+                    console.log(`Before deduplication: ${allNotes.length} notes`);
+                    console.log(`After deduplication: ${uniqueNotes.length} notes`);
+                    console.log(`Previous notes count: ${this.notes.length}`);
+                    
+                    // Check if we got new notes
+                    const newNotesCount = uniqueNotes.length - this.notes.length;
+                    console.log(`Loaded ${newNotesCount} new notes`);
+                    
+                    if (newNotesCount > 0) {
+                        this.notes = uniqueNotes;
+                        this.displayNotes(uniqueNotes);
+                        this.displayStats(uniqueNotes);
+                        this.plotNotesOnMap(uniqueNotes); // This will now show ALL geo notes from all loaded notes
+                        
+                        // Scroll to show new notes
+                        const notesContainer = document.getElementById('notesContainer');
+                        const lastNote = notesContainer.lastElementChild;
+                        if (lastNote) {
+                            lastNote.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                        
+                        // Keep the button visible for more loading
+                        this.showLoadMoreButton();
+                    } else {
+                        // No new notes found, hide the button
+                        loadMoreContainer.style.display = 'none';
+                        console.log('No more notes available');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error loading more notes:', error);
+                    this.displayError('Failed to load more notes: ' + error.message);
+                } finally {
+                    // Reset button state
+                    this.isLoading = false;
+                    loadMoreBtn.disabled = false;
+                    loadMoreBtn.textContent = 'Load More Notes';
+                }
+            }
+
+            showLoadMoreButton() {
+                const loadMoreContainer = document.getElementById('loadMoreContainer');
+                loadMoreContainer.style.display = 'block';
+            }
+
+            hideLoadMoreButton() {
+                const loadMoreContainer = document.getElementById('loadMoreContainer');
+                loadMoreContainer.style.display = 'none';
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            initializeRelayStatus() {
+                // Initialize relay status for all relays
+                this.relays.forEach(relayUrl => {
+                    this.relayStatus[relayUrl] = {
+                        status: 'disconnected',
+                        notesCount: 0,
+                        lastSeen: null,
+                        connectionTime: null
+                    };
+                });
+                this.updateRelayStatusDisplay();
+            }
+
+            updateRelayStatus(relayUrl, status, notesCount = null) {
+                if (this.relayStatus[relayUrl]) {
+                    this.relayStatus[relayUrl].status = status;
+                    this.relayStatus[relayUrl].lastSeen = new Date();
+                    
+                    if (status === 'connected') {
+                        this.relayStatus[relayUrl].connectionTime = new Date();
+                    }
+                    
+                    if (notesCount !== null) {
+                        this.relayStatus[relayUrl].notesCount = notesCount;
+                    }
+                    
+                    this.updateRelayStatusDisplay();
+                }
+            }
+
+            updateRelayStatusDisplay() {
+                const relayList = document.getElementById('relayList');
+                if (!relayList) return;
+
+                relayList.innerHTML = this.relays.map(relayUrl => {
+                    const status = this.relayStatus[relayUrl];
+                    const relayName = relayUrl.replace('wss://', '').replace('wss://', '');
+                    const statusClass = `relay-${status.status}`;
+                    const statusText = status.status.charAt(0).toUpperCase() + status.status.slice(1);
+                    
+                    let statsText = '';
+                    if (status.notesCount > 0) {
+                        statsText = `${status.notesCount} notes`;
+                    }
+                    if (status.connectionTime) {
+                        const connectionAge = Math.floor((new Date() - status.connectionTime) / 1000);
+                        if (connectionAge < 60) {
+                            statsText += statsText ? ` • ${connectionAge}s` : `${connectionAge}s`;
+                        }
+                    }
+
+                    return `
+                        <div class="relay-item">
+                            <div class="relay-status-indicator ${statusClass}"></div>
+                            <div class="relay-name">${relayName}</div>
+                            <div class="relay-stats">${statsText}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Initialize the app when the page loads
+        window.nostrApp = new NostrNotesApp();
+
+        // Lightbox functionality
+        let currentImageIndex = 0;
+        let currentImages = [];
+
+        function openLightbox(index, images) {
+            currentImageIndex = index;
+            currentImages = images;
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImg = document.getElementById('lightbox-img');
+            
+            lightboxImg.src = images[index];
+            lightbox.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            
+            // Show/hide navigation arrows based on number of images
+            const prevBtn = document.querySelector('.lightbox-prev');
+            const nextBtn = document.querySelector('.lightbox-next');
+            prevBtn.style.display = images.length > 1 ? 'block' : 'none';
+            nextBtn.style.display = images.length > 1 ? 'block' : 'none';
+        }
+
+        function closeLightbox() {
+            const lightbox = document.getElementById('lightbox');
+            lightbox.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function nextImage() {
+            if (currentImages.length > 1) {
+                currentImageIndex = (currentImageIndex + 1) % currentImages.length;
+                document.getElementById('lightbox-img').src = currentImages[currentImageIndex];
+            }
+        }
+
+        function previousImage() {
+            if (currentImages.length > 1) {
+                currentImageIndex = (currentImageIndex - 1 + currentImages.length) % currentImages.length;
+                document.getElementById('lightbox-img').src = currentImages[currentImageIndex];
+            }
+        }
+
+        // Close lightbox when clicking outside the image
+        document.getElementById('lightbox').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeLightbox();
+            }
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            const lightbox = document.getElementById('lightbox');
+            if (lightbox.style.display === 'block') {
+                if (e.key === 'Escape') {
+                    closeLightbox();
+                } else if (e.key === 'ArrowRight') {
+                    nextImage();
+                } else if (e.key === 'ArrowLeft') {
+                    previousImage();
+                }
+            }
+        });
+
+
+    </script>
+
+    <!-- Global functions for onclick handlers -->
+    <script>
+        // Copy npub to clipboard
+        function copyNpub() {
+            const npubValue = document.getElementById('npubValue');
+            const text = npubValue.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // Show success feedback
+                const copyBtn = document.querySelector('.copy-btn');
+                const originalContent = copyBtn.innerHTML;
+                
+                copyBtn.innerHTML = `
+                    <svg class="copy-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M9 16.17L4.83 12L3.41 13.41L9 19L21 7L19.59 5.59L9 16.17Z" fill="currentColor"/>
+                    </svg>
+                `;
+                copyBtn.style.background = 'linear-gradient(135deg, #10B981, #059669)';
+                
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalContent;
+                    copyBtn.style.background = 'linear-gradient(135deg, #8B5CF6, #F59E0B)';
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+                // Fallback for older browsers
+                npubValue.select();
+                document.execCommand('copy');
+            });
+        }
+
+        // Raw data modal functionality
+        function showRawData(noteId) {
+            const modal = document.getElementById('rawDataModal');
+            const jsonContent = document.getElementById('rawDataJson');
+            
+            // Find the note by ID in the app's notes array
+            let note = null;
+            if (window.nostrApp && window.nostrApp.notes) {
+                note = window.nostrApp.notes.find(n => n.id === noteId);
+            }
+            
+            if (!note) {
+                console.error('Note not found with ID:', noteId);
+                return;
+            }
+            
+            // Format the note data as pretty JSON
+            const formattedJson = JSON.stringify(note, null, 2);
+            jsonContent.textContent = formattedJson;
+            
+            // Show the modal
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeRawDataModal() {
+            const modal = document.getElementById('rawDataModal');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('rawDataModal');
+            if (event.target === modal) {
+                closeRawDataModal();
+            }
+        }
+    </script>
+</body>
+</html>
